@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Downloaded on first run by jjk/tracker.py
+models/hand_landmarker.task
+
+# Your recordings and trained model — regenerate with record.py / train.py
+data/
+models/classifier.joblib
