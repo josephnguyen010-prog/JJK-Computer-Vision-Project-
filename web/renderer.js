@@ -134,14 +134,25 @@ export function drawLabel(context, text) {
   context.restore();
 }
 
-/** Size the backing store to the element, accounting for device pixel ratio. */
+/**
+ * Size the backing store to the element, accounting for device pixel ratio.
+ *
+ * Returns false when the canvas has no layout -- which is what a hidden parent
+ * gives you. The old version clamped that to 1x1 and carried on, and every
+ * aspect-ratio calculation downstream was then working from a square one pixel
+ * across. Coming back from a hidden state, the video would be drawn cropped
+ * until something forced a correction.
+ */
 export function resizeCanvas(canvas) {
-  const ratio = Math.min(window.devicePixelRatio || 1, 2);
   const rect = canvas.getBoundingClientRect();
-  const width = Math.max(1, Math.round(rect.width * ratio));
-  const height = Math.max(1, Math.round(rect.height * ratio));
+  if (rect.width < 1 || rect.height < 1) return false;
+
+  const ratio = Math.min(window.devicePixelRatio || 1, 2);
+  const width = Math.round(rect.width * ratio);
+  const height = Math.round(rect.height * ratio);
   if (canvas.width !== width || canvas.height !== height) {
     canvas.width = width;
     canvas.height = height;
   }
+  return true;
 }

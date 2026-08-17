@@ -104,7 +104,15 @@ export class SignDemo {
     const dt = this.lastFrameTime === null ? 1 / 60 : Math.min((now - this.lastFrameTime) / 1000, 0.1);
     this.lastFrameTime = now;
 
-    resizeCanvas(this.canvas);
+    // No layout means the demo is hidden behind the instructions. Skip the
+    // whole frame rather than drawing into a collapsed canvas -- the detector
+    // would keep charging against a sign nobody can see, and the render is
+    // wasted work on pixels that are not on screen.
+    if (!resizeCanvas(this.canvas)) {
+      this.lastFrameTime = null;
+      return;
+    }
+
     drawVideo(this.context, this.video);
 
     // The video is on screen well before the models finish downloading. Until
