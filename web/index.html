@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>JJK Hand Signs</title>
+<title>Jujutsu Kaisen Computer Vision Project</title>
 <style>
   :root {
     --bg: #14121a;
@@ -104,7 +104,7 @@
 </head>
 <body>
 
-<h1>Jujutsu Kaisen hand signs</h1>
+<h1>Jujutsu Kaisen Computer Vision Project</h1>
 <p class="lede">
   Throw a sign at the camera and hold it. Nothing leaves your machine &mdash; the
   camera feed and the model both run in this tab.
@@ -147,6 +147,7 @@
   };
 
   let demo = null;
+  let loaded = false;
   let shownPortrait = null;
   let frames = 0;
   let fpsMark = performance.now();
@@ -161,6 +162,17 @@
       fpsMark = now;
     }
 
+    // The video is live well before the models finish downloading, so say so
+    // rather than looking like a demo that detects nothing.
+    if (state.loading) {
+      elements.status.textContent = "Loading the hand tracker…";
+      return;
+    }
+    if (!loaded) {
+      loaded = true;
+      elements.status.textContent = "Throw a sign and hold it.";
+    }
+
     // Swap the <img> only when the sign changes. Reassigning src every frame
     // would restart the GIF continuously and it would never animate.
     const wanted = state.recognised ? state.label : null;
@@ -172,10 +184,6 @@
       } else {
         elements.portrait.classList.remove("visible");
       }
-    }
-
-    if (state.fired) {
-      elements.status.textContent = `${state.display}!`;
     }
 
     if (elements.readout.classList.contains("visible")) {
@@ -196,9 +204,9 @@
     elements.status.textContent = "Loading model and camera…";
     try {
       demo = new SignDemo({ video: elements.video, canvas: elements.canvas, onState });
+      elements.hint.textContent = "Starting camera…";
       await demo.start();
       elements.hint.style.display = "none";
-      elements.status.textContent = "Throw a sign and hold it.";
       elements.skeleton.disabled = false;
       elements.debug.disabled = false;
       elements.start.textContent = "Stop";

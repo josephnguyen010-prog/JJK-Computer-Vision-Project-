@@ -43,8 +43,29 @@ export class SignDemo {
     this.showSkeleton = true;
   }
 
+  /**
+   * Show the camera as soon as it opens, then load the models behind it.
+   *
+   * Both downloads start before the camera is awaited, so the network time
+   * overlaps the permission prompt instead of following it. The render loop
+   * begins the moment there is video, and detection switches on when the
+   * landmarker is ready -- so the user sees themselves immediately rather than
+   * staring at a black panel with the camera light on.
+   */
   async start() {
-    const response = await fetch(this.modelUrl);
+    const modelRequest = fetch(this.modelUrl);
+    const mediapipeReady = this.tracker.loadModel();
+    // Nothing awaits this until later; without a handler a slow failure would
+    // surface as an unhandled rejection before we get a chance to report it.
+    mediapipeReady.catch(() => {});
+
+    await this.tracker.openCamera(this.video);
+
+    this.running = true;
+    this.lastFrameTime = null;
+    this.loop();
+
+    const response = await modelRequest;
     if (!response.ok) {
       throw new Error(`Could not load the model (${response.status}).`);
     }
@@ -57,11 +78,7 @@ export class SignDemo {
     );
     this.detector = new SignDetector(this.classifier, { twoHanded });
 
-    await this.tracker.start(this.video);
-
-    this.running = true;
-    this.lastFrameTime = null;
-    this.loop();
+    await mediapipeReady;
   }
 
   stop() {
@@ -85,9 +102,19 @@ export class SignDemo {
     const dt = this.lastFrameTime === null ? 1 / 60 : Math.min((now - this.lastFrameTime) / 1000, 0.1);
     this.lastFrameTime = now;
 
-    const result = this.tracker.detect(now);
     resizeCanvas(this.canvas);
     drawVideo(this.context, this.video);
+
+    // The video is on screen well before the models finish downloading. Until
+    // both are ready there is simply nothing to detect with, so draw the frame
+    // and report that we are still loading.
+    if (!this.detector || !this.tracker.ready) {
+      this.onState({ loading: true, label: "idle", display: "", confidence: 0,
+                     charge: 0, fired: false, handCount: 0, recognised: false });
+      return;
+    }
+
+    const result = this.tracker.detect(now);
 
     // detect() returns null when the video has not advanced. Reuse the previous
     // hands rather than treating it as "hands gone", which would collapse the
@@ -106,6 +133,7 @@ export class SignDemo {
     if (recognised) drawLabel(this.context, this.displayName(label));
 
     this.onState({
+      loading: false,
       label,
       display: this.displayName(label),
       confidence,

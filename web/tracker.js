@@ -42,10 +42,14 @@ export class HandTracker {
   }
 
   /**
-   * Ask for the camera and load MediaPipe. Both can fail in ways worth
-   * distinguishing, so the errors carry a `reason` the UI can act on.
+   * Open the camera. Deliberately separate from loadModel().
+   *
+   * MediaPipe's WASM and the landmarker weights are several megabytes, and
+   * waiting for them before showing anything meant the camera light came on
+   * while the screen stayed black -- which reads as a broken demo rather than a
+   * loading one. Opening the camera on its own lets the video appear at once.
    */
-  async start(video) {
+  async openCamera(video) {
     this.video = video;
 
     try {
@@ -74,6 +78,11 @@ export class HandTracker {
       });
     }
 
+    return { width: video.videoWidth, height: video.videoHeight };
+  }
+
+  /** Fetch and initialise the hand landmarker. Safe to call after the loop starts. */
+  async loadModel() {
     let FilesetResolver;
     let HandLandmarker;
     try {
@@ -107,7 +116,12 @@ export class HandTracker {
       this.landmarker = await HandLandmarker.createFromOptions(fileset, options);
     }
 
-    return { width: video.videoWidth, height: video.videoHeight };
+    return this.landmarker;
+  }
+
+  /** True once detection can actually run. */
+  get ready() {
+    return Boolean(this.landmarker);
   }
 
   /**
