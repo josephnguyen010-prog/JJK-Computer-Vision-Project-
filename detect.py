@@ -83,11 +83,19 @@ class SignDetector:
         # the evidence simply isn't there. Without this the classifier is free to
         # answer anyway, and it will: signs that MediaPipe merges into one hand
         # get confidently mistaken for two-handed ones whose second hand happened
-        # to drop out. Which sign needs how many hands is already recorded in
-        # signs.py, so the gate is metadata, not a special case.
+        # to drop out.
+        #
+        # Which signs those are is measured during training rather than declared
+        # by hand. A hand-written flag can disagree with reality, and when it
+        # does the gate vetoes a perfectly good sign on every single frame -- with
+        # no symptom other than that sign never working, which looks like a
+        # recognition problem and is not one.
+        measured = bundle.get("two_handed") or {}
         self.needs_two_hands = np.array(
-            [bool(BY_NAME[name].two_handed) if name in BY_NAME else False
-             for name in self.classes],
+            [
+                bool(measured.get(name, BY_NAME[name].two_handed if name in BY_NAME else False))
+                for name in self.classes
+            ],
             dtype=bool,
         )
         self.hand_gate = hand_gate

@@ -40,17 +40,20 @@ SIGNS = [
     # shapes, differing mainly in depth and how high the fist sits.
     Sign("3", "yuta", "Yuta", True, "low"),
 
-    # Two hands crossed perpendicular, fingers interlaced.
-    Sign("4", "gojo", "Gojo", True, "medium"),
+    # Fingers interlace, and MediaPipe merges both hands into a single detection
+    # essentially always -- measured at 100% of recorded frames. A consistently
+    # merged detection is still a distinctive, stable signature, and the [1, 0]
+    # presence flags become part of what identifies it.
+    Sign("4", "gojo", "Gojo", False, "medium"),
 
-    # Hands interlocked at close range. MediaPipe usually merges these into a
-    # single detection rather than finding two -- which is fine, and is why this
-    # is marked one-handed here. A consistently merged detection is still a
-    # distinctive, stable signature, and the [1, 0] presence flags become part of
-    # what identifies it. If the detection count flickers between 1 and 2, record
-    # extra bursts so both states end up under this label.
-    Sign("5", "malevolent_shrine", "Malevolent Shrine", False, "medium"),
+    # Hands stay separate enough that both are found reliably.
+    Sign("5", "malevolent_shrine", "Malevolent Shrine", True, "medium"),
 ]
+
+# `two_handed` above is documentation. What the detector's hand gate actually
+# uses is measured from the recordings during training -- see measure_hand_counts
+# in train.py. These two disagreeing is precisely the bug that motivated the
+# measurement, so the values here are kept in step but are not the authority.
 
 # Deferred, not dropped:
 #   - The face-referenced sign (hand over the eye, finger at the cheek) needs

@@ -35,6 +35,7 @@ def main():
 
     bundle = joblib.load(MODEL)
     pipeline = bundle["model"]
+    measured = bundle.get("two_handed") or {}
     scaler = pipeline.named_steps["standardscaler"]
     net = pipeline.named_steps["mlpclassifier"]
 
@@ -49,8 +50,13 @@ def main():
         # Display names and hand counts travel with the model so the browser
         # build reads them rather than keeping a second copy that can drift
         # out of step with signs.py.
+        # twoHanded comes from what training measured, not from the declaration
+        # in signs.py -- see measure_hand_counts in train.py for why.
         "signs": {
-            sign.name: {"display": sign.display, "twoHanded": sign.two_handed}
+            sign.name: {
+                "display": sign.display,
+                "twoHanded": bool(measured.get(sign.name, sign.two_handed)),
+            }
             for sign in ALL_SIGNS
         },
         "scaler": {

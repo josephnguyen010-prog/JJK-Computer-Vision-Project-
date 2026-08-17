@@ -28,7 +28,7 @@ from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
 from jjk.features import mirror_feature_vector
-from jjk.signs import display_name
+from jjk.signs import ALL_SIGNS, display_name
 
 DATASET = Path(__file__).resolve().parent / "data" / "samples.npz"
 MODEL = Path(__file__).resolve().parent / "models" / "classifier.joblib"
@@ -50,6 +50,57 @@ def build_model():
             random_state=0,
         ),
     )
+
+
+def measure_hand_counts(X, y, classes):
+    """Decide which signs need two hands by looking at what was recorded.
+
+    The presence flags are already in the feature vector, so how many hands
+    MediaPipe actually found for a sign is a measurement, not a guess. Deciding
+    it by hand is how a sign ends up flagged two-handed while producing a single
+    merged detection every time -- which makes the detector's hand gate veto it
+    on every frame, and no amount of tuning elsewhere will bring it back.
+
+    Signs whose fingers interlace routinely merge into one detection. That is a
+    fact about the sign as MediaPipe sees it, and the gate has to agree with it.
+    """
+    print("\nHands seen per sign, measured from the recordings:\n")
+    hand_count = X[:, -4] + X[:, -3]
+    measured = {}
+
+    for name in classes:
+        counts = hand_count[y == name]
+        if len(counts) == 0:
+            continue
+        two_ratio = float((counts == 2).mean())
+
+        if str(name) == "idle":
+            # Idle is never gated, whatever the ratio says. It is the answer for
+            # every frame that isn't a sign, including the one-handed and empty
+            # ones -- gate it and a single visible hand could not be idle, so
+            # something else would have to win and the demo would fire at random.
+            measured[str(name)] = False
+            print(f"  {display_name(name):<24} {two_ratio:6.0%} of frames show two   -> never gated")
+            continue
+
+        # Comfortably above half, so a sign that merges half the time is treated
+        # as the single-detection sign it effectively is.
+        measured[str(name)] = bool(two_ratio >= 0.6)
+        shape = "two hands" if measured[str(name)] else "one detection"
+        print(f"  {display_name(name):<24} {two_ratio:6.0%} of frames show two   -> {shape}")
+
+    declared = {sign.name: sign.two_handed for sign in ALL_SIGNS}
+    for name, actual in measured.items():
+        if name == "idle":
+            continue
+        if name in declared and declared[name] != actual:
+            print(
+                f"\n  ! signs.py calls {name} "
+                f"{'two-handed' if declared[name] else 'one-handed'}, but the "
+                f"recordings say otherwise. The measurement wins."
+            )
+
+    return measured
 
 
 def audit(y, groups):
@@ -185,8 +236,14 @@ def main():
     # data once the number is known.
     final = build_model()
     final.fit(X, y)
+
+    two_handed = measure_hand_counts(X, y, final.classes_)
+
     MODEL.parent.mkdir(parents=True, exist_ok=True)
-    joblib.dump({"model": final, "classes": list(final.classes_)}, MODEL)
+    joblib.dump(
+        {"model": final, "classes": list(final.classes_), "two_handed": two_handed},
+        MODEL,
+    )
     print(f"\nSaved model to {MODEL}")
 
     if grouped_accuracy < 0.85:

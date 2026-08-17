@@ -1,4 +1,4 @@
-"""The charge/lockout state machine.
+﻿"""The charge/lockout state machine.
 
 This is the logic that decides whether the demo is usable, and it is completely
 independent of how good the classifier is -- so it gets tested against a scripted
@@ -126,14 +126,31 @@ def test_fires_close_to_the_configured_charge_time(detector):
     assert detect.CHARGE_SECONDS <= elapsed <= detect.CHARGE_SECONDS + 0.6
 
 
-"""The hand-count gate.
-
-Malevolent Shrine is a sign MediaPipe merges into one detection; Gojo genuinely
-needs two hands. Without a gate, a single-detection frame could be confidently
-called Gojo -- half the evidence missing and no way for the classifier to know.
-"""
+# --- the hand-count gate -------------------------------------------------
+#
+# Gojo's fingers interlace, so MediaPipe merges both hands into a single
+# detection; Megumi and the rest genuinely resolve two. Without a gate, a
+# single-detection frame can be confidently called a two-handed sign -- half the
+# evidence missing and no way for the classifier to know it.
+#
+# Which signs are which is measured from the recordings rather than declared,
+# because getting it backwards vetoes a good sign on every frame and looks
+# exactly like a recognition failure.
 
 REAL_CLASSES = ["idle", "gojo", "malevolent_shrine", "megumi", "sukuna", "yuta"]
+
+# Which signs genuinely need two detections, as measured from the recordings.
+# Gojo's fingers interlace and MediaPipe merges both hands into one detection on
+# 100% of its recorded frames, so gating it on two hands vetoes it permanently --
+# which is exactly the bug that made the gate measure this rather than declare it.
+MEASURED_TWO_HANDED = {
+    "gojo": False,
+    "malevolent_shrine": True,
+    "megumi": True,
+    "sukuna": True,
+    "yuta": True,
+    "idle": False,
+}
 ONE_HAND = {"Left": np.zeros((21, 3), dtype=np.float32)}
 TWO_HANDS = {
     "Left": np.zeros((21, 3), dtype=np.float32),
@@ -161,91 +178,102 @@ def gated_detector(label, hand_gate=True):
     instance.since_two_hands = float("inf")
     instance.hand_gate =hand_gate
     instance.needs_two_hands = np.array(
-        [bool(BY_NAME[name].two_handed) if name in BY_NAME else False for name in REAL_CLASSES],
-        dtype=bool,
+        [MEASURED_TWO_HANDED[name] for name in REAL_CLASSES], dtype=bool
     )
     return instance
 
 
-def test_gojo_is_two_handed_and_malevolent_shrine_is_not():
-    """Guards the assumption the gate rests on."""
-    assert BY_NAME["gojo"].two_handed is True
-    assert BY_NAME["malevolent_shrine"].two_handed is False
+def test_signs_py_agrees_with_what_was_measured():
+    """signs.py is documentation, but documentation that lies is worse than none.
+
+    The gate reads the measured values out of the trained model; these flags only
+    describe them. When they drifted apart, Gojo was vetoed on every frame and
+    looked like a recognition failure.
+    """
+    for name, two_handed in MEASURED_TWO_HANDED.items():
+        if name in BY_NAME:
+            assert BY_NAME[name].two_handed is two_handed, f"{name} is out of step"
+
+
+def test_idle_is_never_gated():
+    """Gating idle would mean a single visible hand could not be idle, forcing
+    some sign to win instead and firing the demo at random."""
+    assert MEASURED_TWO_HANDED["idle"] is False
 
 
 def test_two_handed_sign_cannot_win_on_a_single_detection():
-    """The reported bug: one hand seen, and it confidently answers Gojo."""
-    detector = gated_detector("gojo")
+    """The original bug: one hand seen, and it confidently answers a two-hand sign."""
+    detector = gated_detector("megumi")
     for _ in range(30):
         label, *_ = detector.update(ONE_HAND, DT)
-    assert label != "gojo"
+    assert label != "megumi"
 
 
 def test_two_handed_sign_wins_normally_with_both_hands():
-    detector = gated_detector("gojo")
+    detector = gated_detector("megumi")
     for _ in range(30):
         label, *_ = detector.update(TWO_HANDS, DT)
-    assert label == "gojo"
+    assert label == "megumi"
 
 
 def test_merged_sign_still_wins_on_a_single_detection():
-    """Malevolent Shrine must not be caught by the gate -- one hand is its normal state."""
-    detector = gated_detector("malevolent_shrine")
+    """Gojo must not be caught by the gate -- one detection is its normal state."""
+    detector = gated_detector("gojo")
     for _ in range(30):
         label, confidence, *_ = detector.update(ONE_HAND, DT)
-    assert label == "malevolent_shrine"
+    assert label == "gojo"
     assert confidence >= CONFIDENCE, "gate must not depress confidence below the firing threshold"
 
 
 def test_gate_renormalises_so_confidence_still_means_something():
     """Zeroing classes without renormalising would quietly starve the survivors."""
-    detector = gated_detector("malevolent_shrine")
+    detector = gated_detector("gojo")
     for _ in range(30):
         detector.update(ONE_HAND, DT)
     assert detector.probabilities.sum() == pytest.approx(1.0, abs=0.05)
 
 
 def test_gate_can_be_disabled():
-    detector = gated_detector("gojo", hand_gate=False)
+    detector = gated_detector("megumi", hand_gate=False)
     for _ in range(30):
         label, *_ = detector.update(ONE_HAND, DT)
-    assert label == "gojo"
+    assert label == "megumi"
 
 
 def test_merging_mid_gesture_does_not_veto_the_sign():
     """The gate asks about the gesture, not the frame.
 
-    Signs where the fingers interlace make MediaPipe merge both hands into one
-    detection for stretches at a time. Two hands seen at the start has to keep
-    the sign eligible, or it becomes impossible to throw rather than harder.
+    A two-handed sign can still lose one hand to occlusion for stretches at a
+    time. Two hands seen at the start has to keep it eligible, or it becomes
+    impossible to throw rather than merely harder.
     """
-    detector = gated_detector("gojo")
+    detector = gated_detector("megumi")
     for _ in range(5):
         detector.update(TWO_HANDS, DT)
     for _ in range(30):
         label, *_ = detector.update(ONE_HAND, DT)
-    assert label == "gojo"
+    assert label == "megumi"
 
 
 def test_two_hand_evidence_expires():
     """One glimpse of two hands must not license a two-handed answer forever."""
-    detector = gated_detector("gojo")
+    detector = gated_detector("megumi")
     for _ in range(5):
         detector.update(TWO_HANDS, DT)
     for _ in range(int(3.0 / DT)):
         label, *_ = detector.update(ONE_HAND, DT)
-    assert label != "gojo"
+    assert label != "megumi"
 
 
 def test_hands_leaving_frame_clears_the_evidence():
     """An empty frame ends the gesture, so nothing carries into the next one."""
-    detector = gated_detector("gojo")
+    detector = gated_detector("megumi")
     for _ in range(5):
         detector.update(TWO_HANDS, DT)
     detector.update({}, DT)
     for _ in range(30):
         label, *_ = detector.update(ONE_HAND, DT)
-    assert label != "gojo"
+    assert label != "megumi"
 
 
 def test_single_bad_frame_does_not_cancel_the_charge(detector):
