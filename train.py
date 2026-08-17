@@ -27,6 +27,7 @@ from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 
+from jjk.features import mirror_feature_vector
 from jjk.signs import display_name
 
 DATASET = Path(__file__).resolve().parent / "data" / "samples.npz"
@@ -87,6 +88,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--test-size", type=float, default=0.25)
     parser.add_argument("--force", action="store_true", help="train despite dataset warnings")
+    parser.add_argument(
+        "--no-mirror",
+        action="store_true",
+        help="skip left/right mirror augmentation (use if a sign's meaning depends on which hand does what)",
+    )
     args = parser.parse_args()
 
     if not DATASET.exists():
@@ -109,6 +115,20 @@ def main():
         if not args.force:
             raise SystemExit("\nFix these and re-record, or pass --force to train anyway.")
         print("\n--force given, training anyway.\n")
+
+    if not args.no_mirror:
+        # Reflect every sample so each sign is learned in both orientations --
+        # you get the hands-swapped version of every recording without doing it.
+        #
+        # The mirror keeps its original's burst id. That matters: burst id is
+        # what the split holds out, so a frame and its reflection always land on
+        # the same side. Give them different ids and the test set fills up with
+        # mirrored copies of the training data, which is leakage wearing a hat.
+        mirrored = np.stack([mirror_feature_vector(sample) for sample in X])
+        X = np.vstack([X, mirrored])
+        y = np.concatenate([y, y])
+        groups = np.concatenate([groups, groups])
+        print(f"\nMirror augmentation: {len(y)} samples after reflecting ({len(y) // 2} recorded)")
 
     # The honest split: whole bursts held out, but stratified so every class is
     # actually represented in the test set. A plain group split is free to shove
