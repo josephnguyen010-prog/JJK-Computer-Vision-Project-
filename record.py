@@ -35,7 +35,11 @@ from jjk.tracker import FrameSource, draw_hands, draw_text
 
 DATASET = Path(__file__).resolve().parent / "data" / "samples.npz"
 
-COUNTDOWN_SECONDS = 3
+# Every sign in the vocabulary is two-handed, so you press the key and then need
+# both hands free to get into position. Three seconds is tight for the
+# interlocked poses; five is comfortable. Raise it with --countdown if you need
+# longer to set up.
+COUNTDOWN_SECONDS = 5
 BURST_FRAMES = 150
 
 
@@ -61,7 +65,20 @@ def load_dataset():
 
 
 def save_dataset(X, y, groups):
+    """Save the dataset, keeping the previous version alongside it.
+
+    Recording is the only irreplaceable part of this project -- code can be
+    rewritten, a trained model is thirty seconds of compute, but half an hour in
+    front of the camera is gone for good. Anything that writes to this path gets
+    one level of undo.
+    """
     DATASET.parent.mkdir(parents=True, exist_ok=True)
+
+    if DATASET.exists():
+        backup = DATASET.with_suffix(".npz.bak")
+        backup.unlink(missing_ok=True)
+        DATASET.replace(backup)
+
     np.savez_compressed(DATASET, X=X, y=y, groups=groups)
 
 
@@ -76,6 +93,12 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--camera", type=int, default=0)
     parser.add_argument("--frames", type=int, default=BURST_FRAMES, help="frames per burst")
+    parser.add_argument(
+        "--countdown",
+        type=float,
+        default=COUNTDOWN_SECONDS,
+        help="seconds between pressing the key and recording starting",
+    )
     args = parser.parse_args()
 
     X, y, groups = load_dataset()
@@ -91,6 +114,12 @@ def main():
     capturing = None     # sign currently being captured
     burst = []
     burst_sizes = []     # lets `u` undo the last burst
+    # A burst ends by itself, and the only cue would otherwise be the recording
+    # overlay vanishing -- easy to miss while you're concentrating on holding a
+    # two-handed pose. Hold a confirmation on screen for a moment instead.
+    finished_sign = None
+    finished_at = 0.0
+    CONFIRM_SECONDS = 2.0
 
     with FrameSource(camera=args.camera) as source:
         for frame, result in source:
@@ -139,7 +168,22 @@ def main():
                     burst_sizes.append(len(burst))
                     print(f"  +{len(burst)} {capturing.name}  (total {len(y)})")
                     next_burst += 1
+                    finished_sign, finished_at = capturing, now
                     capturing, burst = None, []
+
+            if finished_sign is not None and now - finished_at < CONFIRM_SECONDS:
+                total = sum(1 for label in y if label == finished_sign.name)
+                draw_text(
+                    frame,
+                    [
+                        f"SAVED  {finished_sign.display}",
+                        f"{total} samples total  -  relax, pick the next sign",
+                    ],
+                    origin=(20, height // 2),
+                    scale=1.0,
+                    color=(120, 255, 120),
+                    gap=44,
+                )
 
             tally = counts(np.array(y, dtype=object))
             lines = [
@@ -171,7 +215,7 @@ def main():
                 sign = BY_KEY.get(chr(key))
                 if sign is not None:
                     pending = sign
-                    countdown_until = now + COUNTDOWN_SECONDS
+                    countdown_until = now + args.countdown
 
     save_dataset(
         np.array(X, dtype=np.float32),

@@ -125,10 +125,40 @@ def draw_hands(frame, hands, thickness=2):
             cv2.circle(frame, tuple(point), thickness + 1, color, -1)
 
 
-def draw_text(frame, lines, origin=(20, 40), scale=0.7, color=(255, 255, 255), gap=32):
-    """Draw a stack of text with a dark outline so it stays readable on any background."""
+def draw_text(frame, lines, origin=(20, 40), scale=0.7, color=(255, 255, 255), gap=32,
+              font=cv2.FONT_HERSHEY_SIMPLEX, panel=True):
+    """Draw a stack of text over a translucent dark panel.
+
+    An earlier version faked contrast by stroking each glyph with a thick black
+    outline. At small scales that outline is wider than the gaps inside the
+    letters, so it fills them in and the text turns to mush against a bright
+    background -- which is exactly the situation this overlay exists for. A flat
+    panel behind the whole block is both more readable and cheaper.
+    """
+    lines = [line for line in lines if line]
+    if not lines:
+        return
+
     x, y = origin
+    thickness = max(1, round(scale * 2))
+
+    if panel:
+        sizes = [cv2.getTextSize(line, font, scale, thickness)[0] for line in lines]
+        pad = max(6, int(12 * scale))
+        left = x - pad
+        top = y - sizes[0][1] - pad
+        right = x + max(width for width, _ in sizes) + pad
+        bottom = y + gap * (len(lines) - 1) + pad
+
+        # Clip to the frame, otherwise a panel that runs off the edge silently
+        # draws nothing at all.
+        left, top = max(0, left), max(0, top)
+        right = min(frame.shape[1], right)
+        bottom = min(frame.shape[0], bottom)
+
+        if right > left and bottom > top:
+            region = frame[top:bottom, left:right]
+            region[:] = (region * 0.35).astype(frame.dtype)
+
     for i, line in enumerate(lines):
-        position = (x, y + i * gap)
-        cv2.putText(frame, line, position, cv2.FONT_HERSHEY_SIMPLEX, scale, (0, 0, 0), 4, cv2.LINE_AA)
-        cv2.putText(frame, line, position, cv2.FONT_HERSHEY_SIMPLEX, scale, color, 1, cv2.LINE_AA)
+        cv2.putText(frame, line, (x, y + i * gap), font, scale, color, thickness, cv2.LINE_AA)
