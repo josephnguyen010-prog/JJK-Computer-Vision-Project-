@@ -19,12 +19,13 @@ from pathlib import Path
 import joblib
 import numpy as np
 
-from jjk.signs import ALL_SIGNS
+from jjk.signs import ALL_SIGNS, SIGNS
 
 ROOT = Path(__file__).resolve().parent
 MODEL = ROOT / "models" / "classifier.joblib"
 DATASET = ROOT / "data" / "samples.npz"
 OUTPUT = ROOT / "web" / "model.json"
+SIGN_LIST = ROOT / "web" / "signs.json"
 
 TEST_VECTORS = 40
 
@@ -93,6 +94,21 @@ def main():
 
     OUTPUT.parent.mkdir(parents=True, exist_ok=True)
     OUTPUT.write_text(json.dumps(export), encoding="utf-8")
+
+    # The sign list on its own, so the page can show the instructions before
+    # anyone presses Start. model.json is over half a megabyte of weights and
+    # has no business being downloaded just to render five labels.
+    SIGN_LIST.write_text(
+        json.dumps(
+            {
+                "signs": [
+                    {"name": sign.name, "display": sign.display}
+                    for sign in SIGNS
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
 
     shapes = " -> ".join(
         [str(len(export["scaler"]["mean"]))] + [str(len(layer["b"])) for layer in export["layers"]]

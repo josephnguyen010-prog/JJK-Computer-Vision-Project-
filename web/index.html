@@ -68,6 +68,40 @@
 
   #hint { position: absolute; color: var(--muted); font-size: 0.9rem; padding: 16px; text-align: center; }
 
+  /* Shown before the camera starts, so the first thing a visitor sees is what
+     they are supposed to do with their hands. */
+  #instructions { width: min(100%, 1000px); }
+  #instructions.hidden { display: none; }
+
+  #instructions h2 { font-size: 0.95rem; font-weight: 600; margin: 0 0 4px; text-align: center; }
+  #instructions p.how { margin: 0 0 14px; color: var(--muted); font-size: 0.88rem; text-align: center; }
+
+  .signs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 12px;
+  }
+
+  .sign-card {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px;
+    text-align: center;
+  }
+  .sign-card .frame {
+    aspect-ratio: 1;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    background: #14121a;
+    overflow: hidden;
+    margin-bottom: 8px;
+  }
+  .sign-card img { width: 100%; height: 100%; object-fit: contain; }
+  .sign-card .missing { color: var(--muted); font-size: 0.75rem; padding: 8px; }
+  .sign-card .name { font-size: 0.86rem; font-weight: 600; }
+
   .controls { display: flex; gap: 10px; align-items: center; }
 
   button {
@@ -136,10 +170,20 @@
 
 <div class="controls">
   <button id="start">Start camera</button>
+  <button id="howToggle" class="secondary">How to use</button>
   <button id="settingsToggle" class="secondary">Settings</button>
 </div>
 
 <div id="status"></div>
+
+<section id="instructions">
+  <h2>Throw one of these five signs</h2>
+  <p class="how">
+    Hold the sign steady facing the camera. A ring closes around your hands as it
+    charges &mdash; when it completes, the character appears.
+  </p>
+  <div class="signs" id="signGrid"></div>
+</section>
 
 <div id="settings">
   <div class="row">
@@ -171,6 +215,7 @@
   const elements = {
     video: $("video"), canvas: $("camera"), portrait: $("portrait"), hint: $("hint"),
     start: $("start"), settingsToggle: $("settingsToggle"), settings: $("settings"),
+    howToggle: $("howToggle"), instructions: $("instructions"), signGrid: $("signGrid"),
     skeleton: $("skeleton"), debug: $("debug"), readout: $("readout"),
     mute: $("mute"), volume: $("volume"), audioRow: $("audioRow"),
     volumeRow: $("volumeRow"), audioNote: $("audioNote"), status: $("status"),
@@ -233,6 +278,62 @@
     }
   }
 
+  const REFERENCE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif"];
+
+  /**
+   * Build the reference card for one sign.
+   *
+   * Extensions are tried in turn via the error handler rather than being fixed,
+   * so a mix of png and jpg in the folder works and a sign with no image yet
+   * shows a placeholder instead of a broken-image icon.
+   */
+  function signCard({ name, display }) {
+    const card = document.createElement("div");
+    card.className = "sign-card";
+
+    const frame = document.createElement("div");
+    frame.className = "frame";
+
+    const image = document.createElement("img");
+    image.alt = display;
+    let attempt = 0;
+    image.onerror = () => {
+      attempt += 1;
+      if (attempt < REFERENCE_EXTENSIONS.length) {
+        image.src = `../assets/instructions/${name}.${REFERENCE_EXTENSIONS[attempt]}`;
+      } else {
+        const missing = document.createElement("span");
+        missing.className = "missing";
+        missing.textContent = "no reference image";
+        frame.replaceChildren(missing);
+      }
+    };
+    image.src = `../assets/instructions/${name}.${REFERENCE_EXTENSIONS[0]}`;
+
+    const label = document.createElement("div");
+    label.className = "name";
+    label.textContent = display;
+
+    frame.append(image);
+    card.append(frame, label);
+    return card;
+  }
+
+  // Loaded from signs.json rather than model.json: the instructions render
+  // before anyone presses Start, and half a megabyte of weights has no business
+  // being downloaded just to draw five labels.
+  fetch("./signs.json")
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => {
+      if (!data) return;
+      elements.signGrid.replaceChildren(...data.signs.map(signCard));
+    })
+    .catch(() => {});
+
+  elements.howToggle.addEventListener("click", () => {
+    elements.instructions.classList.toggle("hidden");
+  });
+
   elements.settingsToggle.addEventListener("click", () => {
     elements.settings.classList.toggle("open");
   });
@@ -249,6 +350,9 @@
       elements.hint.textContent = "Starting camera…";
       await demo.start();
       elements.hint.style.display = "none";
+      // Fold the reference away once the camera is live, so the demo itself
+      // gets the space. The How to use button brings it back.
+      elements.instructions.classList.add("hidden");
       elements.start.textContent = "Stop";
       elements.start.disabled = false;
       elements.start.onclick = () => location.reload();
