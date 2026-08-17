@@ -25,36 +25,82 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    /* Centred vertically, so a short page does not leave a field of empty
-       space underneath the controls. */
     justify-content: center;
     padding: 24px;
     gap: 14px;
   }
 
-  header { text-align: center; }
-  h1 { font-size: 1.25rem; margin: 0 0 4px; font-weight: 600; }
-  p.lede { margin: 0; color: var(--muted); max-width: 62ch; font-size: 0.95rem; }
+  [hidden] { display: none !important; }
 
-  /* Sized from the viewport height rather than a fixed aspect ratio, so the
-     stage grows to fill the window instead of sitting short and wide with
-     dead space below it. */
-  .stage {
+  h1 { font-size: 1.5rem; margin: 0 0 6px; font-weight: 600; text-align: center; }
+  p.lede { margin: 0 auto; color: var(--muted); max-width: 62ch; text-align: center; font-size: 0.95rem; }
+
+  button {
+    font: inherit; font-weight: 600; color: #fff;
+    background: var(--accent); border: 0; border-radius: 8px;
+    padding: 11px 24px; cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); font-weight: 500; }
+
+  /* ---- intro ---- */
+
+  #intro { width: min(100%, 1000px); display: flex; flex-direction: column; gap: 20px; }
+
+  .steps {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 2px;
-    background: var(--line);
-    border: 1px solid var(--line);
-    border-radius: 12px;
-    overflow: hidden;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  .step {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 14px 16px;
+  }
+  .step .num {
+    display: inline-grid; place-items: center;
+    width: 22px; height: 22px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    font-size: 0.78rem; font-weight: 700; margin-bottom: 8px;
+  }
+  .step h3 { margin: 0 0 4px; font-size: 0.92rem; font-weight: 600; }
+  .step p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+
+  .signs-heading { text-align: center; }
+  .signs-heading h2 { font-size: 1rem; margin: 0 0 4px; font-weight: 600; }
+  .signs-heading p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+
+  .signs { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 12px; }
+
+  .sign-card {
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px; text-align: center;
+  }
+  .sign-card .frame {
+    aspect-ratio: 1; display: grid; place-items: center;
+    border-radius: 6px; background: #14121a; overflow: hidden; margin-bottom: 8px;
+  }
+  .sign-card img { width: 100%; height: 100%; object-fit: contain; }
+  .sign-card .missing { color: var(--muted); font-size: 0.75rem; padding: 8px; }
+  .sign-card .name { font-size: 0.86rem; font-weight: 600; }
+
+  .intro-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .privacy { color: var(--muted); font-size: 0.82rem; text-align: center; }
+
+  /* ---- demo ---- */
+
+  #demo { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
+
+  .stage {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+    background: var(--line); border: 1px solid var(--line);
+    border-radius: 12px; overflow: hidden;
     height: clamp(240px, 58vh, 560px);
     width: min(100%, calc(clamp(240px, 58vh, 560px) * 32 / 9));
   }
 
   @media (max-width: 860px) {
     .stage {
-      grid-template-columns: 1fr;
-      grid-template-rows: 1fr 1fr;
+      grid-template-columns: 1fr; grid-template-rows: 1fr 1fr;
       height: clamp(320px, 70vh, 720px);
       width: min(100%, calc(clamp(320px, 70vh, 720px) * 8 / 9));
     }
@@ -68,63 +114,15 @@
 
   #hint { position: absolute; color: var(--muted); font-size: 0.9rem; padding: 16px; text-align: center; }
 
-  /* Shown before the camera starts, so the first thing a visitor sees is what
-     they are supposed to do with their hands. */
-  #instructions { width: min(100%, 1000px); }
-  #instructions.hidden { display: none; }
-
-  #instructions h2 { font-size: 0.95rem; font-weight: 600; margin: 0 0 4px; text-align: center; }
-  #instructions p.how { margin: 0 0 14px; color: var(--muted); font-size: 0.88rem; text-align: center; }
-
-  .signs {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-    gap: 12px;
-  }
-
-  .sign-card {
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 10px;
-    text-align: center;
-  }
-  .sign-card .frame {
-    aspect-ratio: 1;
-    display: grid;
-    place-items: center;
-    border-radius: 6px;
-    background: #14121a;
-    overflow: hidden;
-    margin-bottom: 8px;
-  }
-  .sign-card img { width: 100%; height: 100%; object-fit: contain; }
-  .sign-card .missing { color: var(--muted); font-size: 0.75rem; padding: 8px; }
-  .sign-card .name { font-size: 0.86rem; font-weight: 600; }
-
-  .controls { display: flex; gap: 10px; align-items: center; }
-
-  button {
-    font: inherit; font-weight: 600; color: #fff;
-    background: var(--accent); border: 0; border-radius: 8px;
-    padding: 10px 20px; cursor: pointer;
-  }
-  button:disabled { opacity: 0.5; cursor: default; }
-  button.secondary { background: transparent; border: 1px solid var(--line); color: var(--text); font-weight: 500; }
-
+  .controls { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
   #status { color: var(--muted); font-size: 0.9rem; min-height: 1.4em; text-align: center; }
 
-  /* Everything optional lives here, so the main row stays two buttons however
+  /* Everything optional lives here, so the controls row stays short however
      many features get added. */
   #settings {
-    width: min(100%, 560px);
-    background: var(--panel);
-    border: 1px solid var(--line);
-    border-radius: 10px;
-    padding: 14px 18px;
-    display: none;
-    gap: 10px;
-    flex-direction: column;
+    width: min(100%, 560px); background: var(--panel);
+    border: 1px solid var(--line); border-radius: 10px;
+    padding: 14px 18px; display: none; gap: 10px; flex-direction: column;
   }
   #settings.open { display: flex; }
 
@@ -150,60 +148,89 @@
 </head>
 <body>
 
-<header>
-  <h1>Jujutsu Kaisen Computer Vision Project</h1>
-  <p class="lede">
-    Throw a sign at the camera and hold it. Nothing leaves your machine &mdash;
-    the camera feed and the model both run in this tab.
-  </p>
-</header>
-
-<div class="stage">
-  <div class="panel">
-    <canvas id="camera"></canvas>
-    <span id="hint">Camera off</span>
+<!-- ---------------- intro ---------------- -->
+<section id="intro">
+  <div>
+    <h1>Jujutsu Kaisen Computer Vision Project</h1>
+    <p class="lede">
+      A hand sign recogniser trained from scratch. Throw one of five signs at your
+      webcam and it names the character it belongs to.
+    </p>
   </div>
-  <div class="panel">
-    <img id="portrait" alt="" />
+
+  <div class="steps">
+    <div class="step">
+      <div class="num">1</div>
+      <h3>Allow the camera</h3>
+      <p>Your browser will ask. The feed never leaves your machine.</p>
+    </div>
+    <div class="step">
+      <div class="num">2</div>
+      <h3>Throw a sign</h3>
+      <p>Both hands up, facing the camera, roughly an arm's length back.</p>
+    </div>
+    <div class="step">
+      <div class="num">3</div>
+      <h3>Hold it steady</h3>
+      <p>A ring closes around your hands as it charges. About a second.</p>
+    </div>
   </div>
-</div>
 
-<div class="controls">
-  <button id="start">Start camera</button>
-  <button id="howToggle" class="secondary">How to use</button>
-  <button id="settingsToggle" class="secondary">Settings</button>
-</div>
-
-<div id="status"></div>
-
-<section id="instructions">
-  <h2>Throw one of these five signs</h2>
-  <p class="how">
-    Hold the sign steady facing the camera. A ring closes around your hands as it
-    charges &mdash; when it completes, the character appears.
-  </p>
+  <div class="signs-heading">
+    <h2>The five signs</h2>
+    <p>Anything else your hands are doing is read as nothing, so you won't set it off by accident.</p>
+  </div>
   <div class="signs" id="signGrid"></div>
+
+  <div class="intro-actions">
+    <button id="enter">Start camera</button>
+    <p class="privacy">
+      Runs entirely in this tab &mdash; the video and the model both stay on your
+      machine, and nothing is uploaded or recorded.
+    </p>
+  </div>
 </section>
 
-<div id="settings">
-  <div class="row">
-    <label><input type="checkbox" id="skeleton" checked /> Show hand tracking</label>
+<!-- ---------------- demo ---------------- -->
+<main id="demo" hidden>
+  <div class="stage">
+    <div class="panel">
+      <canvas id="camera"></canvas>
+      <span id="hint">Starting camera…</span>
+    </div>
+    <div class="panel">
+      <img id="portrait" alt="" />
+    </div>
   </div>
-  <div class="row">
-    <label><input type="checkbox" id="debug" /> Show readout</label>
-    <span class="note">live probabilities and frame rate</span>
+
+  <div class="controls">
+    <button id="stop" class="secondary">Stop</button>
+    <button id="backToIntro" class="secondary">Instructions</button>
+    <button id="settingsToggle" class="secondary">Settings</button>
   </div>
-  <pre id="readout"></pre>
-  <hr />
-  <div class="row disabled" id="audioRow">
-    <label><input type="checkbox" id="mute" /> Mute audio</label>
-    <span class="note" id="audioNote">no audio files found</span>
+
+  <div id="status"></div>
+
+  <div id="settings">
+    <div class="row">
+      <label><input type="checkbox" id="skeleton" checked /> Show hand tracking</label>
+    </div>
+    <div class="row">
+      <label><input type="checkbox" id="debug" /> Show readout</label>
+      <span class="note">live probabilities and frame rate</span>
+    </div>
+    <pre id="readout"></pre>
+    <hr />
+    <div class="row disabled" id="audioRow">
+      <label><input type="checkbox" id="mute" /> Mute audio</label>
+      <span class="note" id="audioNote">no audio files found</span>
+    </div>
+    <div class="row disabled" id="volumeRow">
+      <label for="volume">Music volume</label>
+      <input type="range" id="volume" min="0" max="100" value="35" />
+    </div>
   </div>
-  <div class="row disabled" id="volumeRow">
-    <label for="volume">Music volume</label>
-    <input type="range" id="volume" min="0" max="100" value="35" />
-  </div>
-</div>
+</main>
 
 <video id="video" playsinline muted></video>
 
@@ -213,9 +240,10 @@
 
   const $ = (id) => document.getElementById(id);
   const elements = {
+    intro: $("intro"), demo: $("demo"), signGrid: $("signGrid"),
+    enter: $("enter"), stop: $("stop"), backToIntro: $("backToIntro"),
     video: $("video"), canvas: $("camera"), portrait: $("portrait"), hint: $("hint"),
-    start: $("start"), settingsToggle: $("settingsToggle"), settings: $("settings"),
-    howToggle: $("howToggle"), instructions: $("instructions"), signGrid: $("signGrid"),
+    settingsToggle: $("settingsToggle"), settings: $("settings"),
     skeleton: $("skeleton"), debug: $("debug"), readout: $("readout"),
     mute: $("mute"), volume: $("volume"), audioRow: $("audioRow"),
     volumeRow: $("volumeRow"), audioNote: $("audioNote"), status: $("status"),
@@ -228,6 +256,58 @@
   let frames = 0;
   let fpsMark = performance.now();
   let fps = 0;
+
+  // ---- the sign reference cards ----
+
+  const REFERENCE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif"];
+
+  /**
+   * Extensions are tried in turn through the error handler rather than being
+   * fixed, so a mix of formats works and a sign with no image yet shows a
+   * placeholder instead of a broken-image icon. Reference pictures can then be
+   * added one at a time.
+   */
+  function signCard({ name, display }) {
+    const card = document.createElement("div");
+    card.className = "sign-card";
+
+    const frame = document.createElement("div");
+    frame.className = "frame";
+
+    const image = document.createElement("img");
+    image.alt = display;
+    let attempt = 0;
+    image.onerror = () => {
+      attempt += 1;
+      if (attempt < REFERENCE_EXTENSIONS.length) {
+        image.src = `../assets/instructions/${name}.${REFERENCE_EXTENSIONS[attempt]}`;
+      } else {
+        const missing = document.createElement("span");
+        missing.className = "missing";
+        missing.textContent = "no reference image";
+        frame.replaceChildren(missing);
+      }
+    };
+    image.src = `../assets/instructions/${name}.${REFERENCE_EXTENSIONS[0]}`;
+
+    const label = document.createElement("div");
+    label.className = "name";
+    label.textContent = display;
+
+    frame.append(image);
+    card.append(frame, label);
+    return card;
+  }
+
+  // signs.json rather than model.json: the intro renders before anyone presses
+  // Start, and half a megabyte of weights has no business being downloaded just
+  // to draw five labels.
+  fetch("./signs.json")
+    .then((response) => (response.ok ? response.json() : null))
+    .then((data) => data && elements.signGrid.replaceChildren(...data.signs.map(signCard)))
+    .catch(() => {});
+
+  // ---- per-frame state ----
 
   function onState(state) {
     frames += 1;
@@ -278,84 +358,32 @@
     }
   }
 
-  const REFERENCE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif"];
+  // ---- view switching ----
 
-  /**
-   * Build the reference card for one sign.
-   *
-   * Extensions are tried in turn via the error handler rather than being fixed,
-   * so a mix of png and jpg in the folder works and a sign with no image yet
-   * shows a placeholder instead of a broken-image icon.
-   */
-  function signCard({ name, display }) {
-    const card = document.createElement("div");
-    card.className = "sign-card";
-
-    const frame = document.createElement("div");
-    frame.className = "frame";
-
-    const image = document.createElement("img");
-    image.alt = display;
-    let attempt = 0;
-    image.onerror = () => {
-      attempt += 1;
-      if (attempt < REFERENCE_EXTENSIONS.length) {
-        image.src = `../assets/instructions/${name}.${REFERENCE_EXTENSIONS[attempt]}`;
-      } else {
-        const missing = document.createElement("span");
-        missing.className = "missing";
-        missing.textContent = "no reference image";
-        frame.replaceChildren(missing);
-      }
-    };
-    image.src = `../assets/instructions/${name}.${REFERENCE_EXTENSIONS[0]}`;
-
-    const label = document.createElement("div");
-    label.className = "name";
-    label.textContent = display;
-
-    frame.append(image);
-    card.append(frame, label);
-    return card;
+  function showDemo() {
+    elements.intro.hidden = true;
+    elements.demo.hidden = false;
   }
 
-  // Loaded from signs.json rather than model.json: the instructions render
-  // before anyone presses Start, and half a megabyte of weights has no business
-  // being downloaded just to draw five labels.
-  fetch("./signs.json")
-    .then((response) => (response.ok ? response.json() : null))
-    .then((data) => {
-      if (!data) return;
-      elements.signGrid.replaceChildren(...data.signs.map(signCard));
-    })
-    .catch(() => {});
+  function showIntro() {
+    elements.demo.hidden = true;
+    elements.intro.hidden = false;
+  }
 
-  elements.howToggle.addEventListener("click", () => {
-    elements.instructions.classList.toggle("hidden");
-  });
-
-  elements.settingsToggle.addEventListener("click", () => {
-    elements.settings.classList.toggle("open");
-  });
-
-  elements.start.addEventListener("click", async () => {
-    elements.start.disabled = true;
+  elements.enter.addEventListener("click", async () => {
+    elements.enter.disabled = true;
+    elements.enter.textContent = "Starting…";
+    showDemo();
     elements.status.textContent = "Loading model and camera…";
+
     try {
-      // ?gate=off disables the two-hand requirement, to test whether it is
-      // what is blocking a sign.
+      // ?gate=off disables the two-hand requirement, to test whether it is what
+      // is blocking a sign.
       const handGate = new URLSearchParams(location.search).get("gate") !== "off";
       demo = new SignDemo({ video: elements.video, canvas: elements.canvas, onState, handGate });
       demo.showSkeleton = elements.skeleton.checked;
-      elements.hint.textContent = "Starting camera…";
       await demo.start();
-      elements.hint.style.display = "none";
-      // Fold the reference away once the camera is live, so the demo itself
-      // gets the space. The How to use button brings it back.
-      elements.instructions.classList.add("hidden");
-      elements.start.textContent = "Stop";
-      elements.start.disabled = false;
-      elements.start.onclick = () => location.reload();
+      elements.hint.hidden = true;
 
       // Audio is discovered after the model loads, since the sign names come
       // from it. Starting it here keeps it inside the click that got us here --
@@ -371,12 +399,27 @@
         await sounds.start();
       }
     } catch (error) {
+      // Back to the intro, where the message has room and the button is the
+      // obvious thing to press again.
+      showIntro();
+      elements.enter.disabled = false;
+      elements.enter.textContent = "Start camera";
       elements.status.textContent =
         error.reason === "permission"
-          ? "Camera permission denied. Allow it in your browser and reload."
+          ? "Camera permission denied. Allow it in your browser and try again."
           : error.message;
-      elements.start.disabled = false;
+      alert(elements.status.textContent);
     }
+  });
+
+  // The camera keeps running behind the instructions, so coming back is instant
+  // rather than paying for the permission prompt and model load again.
+  elements.backToIntro.addEventListener("click", showIntro);
+
+  elements.stop.addEventListener("click", () => location.reload());
+
+  elements.settingsToggle.addEventListener("click", () => {
+    elements.settings.classList.toggle("open");
   });
 
   elements.skeleton.addEventListener("change", () => {
