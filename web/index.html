@@ -96,11 +96,8 @@
     border-radius: 10px; padding: 8px; text-align: center;
     display: flex; flex-direction: column;
   }
-  /* Height rather than aspect-ratio: this is the tallest thing on the page, so
-     tying it to the viewport is what keeps the intro on one screen. */
   .sign-card .frame {
-    height: clamp(64px, 13vh, 132px);
-    display: grid; place-items: center;
+    aspect-ratio: 1; display: grid; place-items: center;
     border-radius: 6px; background: #14121a; overflow: hidden; margin-bottom: 6px;
   }
   .sign-card img { width: 100%; height: 100%; object-fit: contain; }
