@@ -33,6 +33,12 @@
   [hidden] { display: none !important; }
 
   h1 { font-size: 1.5rem; margin: 0 0 6px; font-weight: 600; text-align: center; }
+
+  .title { text-align: center; margin-bottom: 6px; }
+  #logo { max-width: min(100%, 420px); height: auto; display: block; margin: 0 auto 4px; }
+  /* Only one of the two is ever shown: the logo replaces the wordmark if the
+     image loads, and the heading stands in if it does not. */
+  .title.has-logo h1 { font-size: 1rem; font-weight: 500; color: var(--muted); margin: 0; }
   p.lede { margin: 0 auto; color: var(--muted); max-width: 62ch; text-align: center; font-size: 0.95rem; }
 
   button {
@@ -154,8 +160,9 @@
 
 <!-- ---------------- intro ---------------- -->
 <section id="intro">
-  <div>
-    <h1>Jujutsu Kaisen Computer Vision Project</h1>
+  <div class="title" id="title">
+    <img id="logo" alt="Jujutsu Kaisen" hidden />
+    <h1 id="heading">Jujutsu Kaisen Computer Vision Project</h1>
     <p class="lede">
       A hand sign recogniser trained from scratch. Throw one of five signs at your
       webcam and it names the character it belongs to.
@@ -247,7 +254,7 @@
   const elements = {
     intro: $("intro"), demo: $("demo"), signGrid: $("signGrid"),
     enter: $("enter"), cameraButton: $("cameraButton"), backToIntro: $("backToIntro"),
-    demoError: $("demoError"),
+    demoError: $("demoError"), title: $("title"), logo: $("logo"), heading: $("heading"),
     video: $("video"), canvas: $("camera"), portrait: $("portrait"), hint: $("hint"),
     settingsToggle: $("settingsToggle"), settings: $("settings"),
     skeleton: $("skeleton"), debug: $("debug"), readout: $("readout"),
@@ -264,9 +271,31 @@
   let fpsMark = performance.now();
   let fps = 0;
 
-  // ---- the sign reference cards ----
-
   const REFERENCE_EXTENSIONS = ["png", "jpg", "jpeg", "webp", "gif"];
+
+  // ---- the logo ----
+  //
+  // Optional. Drop assets/logo.<ext> in and it appears above the heading, which
+  // then shrinks to a subtitle. With no file the heading carries the page on its
+  // own, so the page is never waiting on an image that may not exist.
+  (function loadLogo() {
+    const extensions = ["svg", "png", "webp", "jpg"];
+    let attempt = 0;
+    elements.logo.onload = () => {
+      elements.logo.hidden = false;
+      elements.title.classList.add("has-logo");
+      elements.heading.textContent = "Computer Vision Project";
+    };
+    elements.logo.onerror = () => {
+      attempt += 1;
+      if (attempt < extensions.length) {
+        elements.logo.src = `../assets/logo.${extensions[attempt]}`;
+      }
+    };
+    elements.logo.src = `../assets/logo.${extensions[0]}`;
+  })();
+
+  // ---- the sign reference cards ----
 
   /**
    * Extensions are tried in turn through the error handler rather than being
