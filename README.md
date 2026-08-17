@@ -17,6 +17,29 @@ model has been downloaded. To run anything:
 
 (or activate the venv first with `.venv\Scripts\Activate.ps1`.)
 
+## The v1 vocabulary
+
+Four signs plus idle, ordered easiest-first. Keys are what you press in `record.py`.
+
+| Key | Sign | Shape |
+|---|---|---|
+| `0` | idle | anything that isn't a sign |
+| `1` | Malevolent Shrine | two closed fists, held apart |
+| `2` | Palm Thrust | palm thrust at camera, other hand a raised fist |
+| `3` | Palm and Fist | flat palm forward, fist lower at the chest |
+| `4` | Crossed Hands | two hands crossed perpendicular, fingers interlaced |
+| `5` | Interlocked | hands interlocked at close range — MediaPipe merges these into one detection, which is fine |
+
+Display names for 2, 3 and 4 are placeholders — rename them in
+[jjk/signs.py](jjk/signs.py), it only changes what's drawn on screen.
+
+**Deferred, not dropped.** The face-referenced sign (hand over the eye, finger at
+the cheek) can't work on hand landmarks alone — absolute position is normalised
+away on purpose, so a palm over your eye and a palm anywhere else are the same
+vector. It needs face landmarks added first. The two heavily-interlocked signs,
+where the hands press together and MediaPipe merges them into one detection, are
+worth retrying with `view_signs.py` once the pipeline is proven.
+
 ## The workflow, in order
 
 ### 1. Find out which signs are viable — `view_signs.py`
@@ -131,6 +154,36 @@ tests/            feature invariance + the charge state machine
 
 Run the tests with `python -m pytest tests/` — 18 of them, no webcam needed.
 
+## Screen layout
+
+By default the window is split down the middle — **camera on the left, character
+on the right**:
+
+```
+python detect.py                    # split screen (default)
+python detect.py --layout overlay   # character beside your hands instead
+```
+
+Each panel is the size of the camera frame, so the webcam half is pixel-exact
+with no letterboxing, and the whole canvas is scaled down at the end to fit on a
+normal screen. The character panel stays empty until a sign is recognised.
+
+## Character portraits
+
+Drop an image into `assets/characters/` named after the sign — `malevolent_shrine.gif`,
+`interlocked.png` — and it appears beside your hands when that sign is recognised.
+Nothing else needs editing.
+
+- **Animated GIF and WebP** play on loop at their own frame timing. **PNG/JPG** work too.
+- Transparency is preserved in all formats.
+- Scaled automatically to 260px tall; portrait-shaped art looks best.
+- The portrait fades in as recognition firms up, and flips to the other side of
+  your hands when you're near the edge of frame.
+- Signs with no image just don't show one — a half-filled folder is fine.
+
+`python make_placeholder_portraits.py` writes stand-in cards for every sign so
+the display works before you have art. Overwrite them at the same filenames.
+
 ## Adding or changing signs
 
 Everything reads from `SIGNS` in `jjk/signs.py`. Add an entry, re-record, retrain.
@@ -139,11 +192,16 @@ The `occlusion` field is your own triage note from step 1; nothing enforces it.
 ## Notes
 
 - `jjk/features.py` places **both hands in one shared coordinate frame** rather
-  than normalising each hand separately. Several domain expansion signs differ
-  mainly in how the hands sit relative to each other, and per-hand normalisation
-  would erase exactly that.
-- The preview is mirrored, which also makes MediaPipe's Left/Right labels match
-  your actual hands. Recording and detection both go through `FrameSource`, so
-  the convention stays consistent — which is all the classifier needs.
+  than normalising each hand separately. Several of these signs differ mainly in
+  how the hands sit relative to each other, and per-hand normalisation would
+  erase exactly that.
+- **Hands are slotted by screen position, not by MediaPipe's Left/Right label.**
+  On symmetric poses — two fists especially — that label flips between frames,
+  and label-keyed slots would swap both halves of the feature vector and read as
+  a completely different sign. Screen order is decided by the pixels, so it can't
+  disagree with itself. The label still rides along as a soft feature.
+- The preview is mirrored so it behaves like a mirror. Recording and detection
+  both go through `FrameSource`, so the convention stays consistent — which is
+  all the classifier needs.
 - If the webcam won't open, close anything else using it, or try
   `--camera 1`.

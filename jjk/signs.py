@@ -22,16 +22,44 @@ class Sign:
     occlusion: str    # "low" | "medium" | "high" -- expected tracking difficulty
 
 
+# Record keys are unchanged from the original session -- each key still means the
+# same physical sign, so muscle memory from recording still applies. Only the
+# names changed, from descriptions of the hand shape to who the sign belongs to.
 SIGNS = [
-    Sign("1", "gojo_blue", "Lapse: Blue", False, "low"),
-    Sign("2", "gojo_red", "Reversal: Red", False, "low"),
-    Sign("3", "gojo_purple", "Hollow Purple", True, "medium"),
-    Sign("4", "nobara_resonance", "Resonance", True, "medium"),
-    Sign("5", "megumi_shikigami", "Divine Dogs", True, "medium"),
-    Sign("6", "megumi_domain", "Chimera Shadow Garden", True, "high"),
-    Sign("7", "sukuna_domain", "Malevolent Shrine", True, "high"),
-    Sign("8", "gojo_domain", "Unlimited Void", True, "high"),
+    # Two closed fists held apart. The easiest sign of the set: compact, stable,
+    # and with no hand-on-hand occlusion for MediaPipe to lose track of.
+    Sign("1", "megumi", "Megumi", True, "low"),
+
+    # Palm thrust toward the camera, other hand a raised fist. The thrust hand is
+    # foreshortened and reads much larger than the fist -- that size difference
+    # survives normalisation and is most of what separates this from yuta.
+    Sign("2", "sukuna", "Sukuna", True, "low"),
+
+    # Flat palm forward with fingers together, fist held lower at the chest.
+    # Watch this one against sukuna in the confusion matrix: same two hand
+    # shapes, differing mainly in depth and how high the fist sits.
+    Sign("3", "yuta", "Yuta", True, "low"),
+
+    # Two hands crossed perpendicular, fingers interlaced.
+    Sign("4", "gojo", "Gojo", True, "medium"),
+
+    # Hands interlocked at close range. MediaPipe usually merges these into a
+    # single detection rather than finding two -- which is fine, and is why this
+    # is marked one-handed here. A consistently merged detection is still a
+    # distinctive, stable signature, and the [1, 0] presence flags become part of
+    # what identifies it. If the detection count flickers between 1 and 2, record
+    # extra bursts so both states end up under this label.
+    Sign("5", "malevolent_shrine", "Malevolent Shrine", False, "medium"),
 ]
+
+# Deferred, not dropped:
+#   - The face-referenced sign (hand over the eye, finger at the cheek) needs
+#     face landmarks before it can work at all. Hand landmarks alone cannot tell
+#     a splayed palm over your eye from a splayed palm anywhere else, because
+#     absolute position is normalised away on purpose.
+#   - The two heavily-interlocked signs, where the hands press together and
+#     MediaPipe tends to merge them into one detection. Retry these with
+#     view_signs.py once the pipeline is proven end to end.
 
 # Recorded whenever your hands are doing nothing in particular. Without a
 # negative class the classifier has to assign *some* sign to every frame, so it

@@ -9,3 +9,6 @@ models/hand_landmarker.task
 # Your recordings and trained model — regenerate with record.py / train.py
 data/
 models/classifier.joblib
+
+# Snapshots of you taken by identify.py, for matching signs to class names
+identify/
