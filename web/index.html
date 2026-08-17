@@ -120,12 +120,16 @@
 
   #demo { display: flex; flex-direction: column; align-items: center; gap: 14px; width: 100%; }
 
+  /* The camera gets the larger share. It is where the work happens -- lining up
+     your hands, watching the ring close -- while the character panel is a glance.
+     Narrowing it also buys the camera vertical space, since the stage is capped
+     by window width. The portraits are about 1.75:1 and lose nothing here. */
   .stage {
-    display: grid; grid-template-columns: 1fr 1fr; gap: 2px;
+    display: grid; grid-template-columns: 1.4fr 1fr; gap: 2px;
     background: var(--line); border: 1px solid var(--line);
     border-radius: 12px; overflow: hidden;
     height: clamp(240px, 58vh, 560px);
-    width: min(100%, calc(clamp(240px, 58vh, 560px) * 32 / 9));
+    width: min(100%, calc(clamp(240px, 58vh, 560px) * 2.7));
   }
 
   @media (max-width: 860px) {
@@ -464,9 +468,30 @@
   // the thing it is asking about.
   elements.enter.addEventListener("click", showDemo);
 
+  /** Release the camera and reset the panel, without throwing the page away. */
+  function stopCamera() {
+    demo?.stop();
+    sounds?.stop();
+    running = false;
+    loaded = false;
+    shownPortrait = null;
+
+    // Clear the last frame rather than leaving a frozen picture of you behind.
+    const context = elements.canvas.getContext("2d");
+    context.clearRect(0, 0, elements.canvas.width, elements.canvas.height);
+    elements.portrait.classList.remove("visible");
+
+    elements.hint.textContent = "Camera off";
+    elements.hint.hidden = false;
+    elements.status.textContent = "";
+    elements.cameraButton.textContent = "Start camera";
+    elements.cameraButton.classList.remove("secondary");
+    elements.cameraButton.disabled = false;
+  }
+
   elements.cameraButton.addEventListener("click", async () => {
     if (running) {
-      location.reload();
+      stopCamera();
       return;
     }
 
@@ -492,16 +517,20 @@
       // Audio is discovered after the model loads, since the sign names come
       // from it. Starting it here keeps it inside the click that got us here --
       // browsers block playback that isn't traceable to a user gesture.
-      sounds = new SoundBoard({ signs: demo.classifier.classes });
-      const available = await sounds.load();
-      if (sounds.hasAudio) {
-        elements.audioRow.classList.remove("disabled");
-        elements.audioNote.textContent = available.music
-          ? `theme + ${available.effects.length} sign sounds`
-          : `${available.effects.length} sign sounds`;
-        if (available.music) elements.volumeRow.classList.remove("disabled");
-        await sounds.start();
+      // Discovered once and kept: stopping and starting the camera again should
+      // not re-probe every file.
+      if (!sounds) {
+        sounds = new SoundBoard({ signs: demo.classifier.classes });
+        const available = await sounds.load();
+        if (sounds.hasAudio) {
+          elements.audioRow.classList.remove("disabled");
+          elements.audioNote.textContent = available.music
+            ? `theme + ${available.effects.length} sign sounds`
+            : `${available.effects.length} sign sounds`;
+          if (available.music) elements.volumeRow.classList.remove("disabled");
+        }
       }
+      if (sounds.hasAudio && !elements.mute.checked) await sounds.start();
     } catch (error) {
       // Stay on the demo screen: the button that failed is here, and it is the
       // obvious thing to press again once the permission is sorted out.
