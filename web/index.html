@@ -187,8 +187,7 @@
   <div class="signs" id="signGrid"></div>
 
   <div class="intro-actions">
-    <button id="enter">Start camera</button>
-    <p class="error" id="introError" hidden></p>
+    <button id="enter">Start</button>
     <p class="privacy">
       Runs entirely in this tab &mdash; the video and the model both stay on your
       machine, and nothing is uploaded or recorded.
@@ -201,7 +200,7 @@
   <div class="stage">
     <div class="panel">
       <canvas id="camera"></canvas>
-      <span id="hint">Starting camera…</span>
+      <span id="hint">Camera off</span>
     </div>
     <div class="panel">
       <img id="portrait" alt="" />
@@ -209,12 +208,13 @@
   </div>
 
   <div class="controls">
-    <button id="stop" class="secondary">Stop</button>
+    <button id="cameraButton">Start camera</button>
     <button id="backToIntro" class="secondary">Instructions</button>
     <button id="settingsToggle" class="secondary">Settings</button>
   </div>
 
   <div id="status"></div>
+  <p class="error" id="demoError" hidden></p>
 
   <div id="settings">
     <div class="row">
@@ -246,8 +246,8 @@
   const $ = (id) => document.getElementById(id);
   const elements = {
     intro: $("intro"), demo: $("demo"), signGrid: $("signGrid"),
-    enter: $("enter"), stop: $("stop"), backToIntro: $("backToIntro"),
-    introError: $("introError"),
+    enter: $("enter"), cameraButton: $("cameraButton"), backToIntro: $("backToIntro"),
+    demoError: $("demoError"),
     video: $("video"), canvas: $("camera"), portrait: $("portrait"), hint: $("hint"),
     settingsToggle: $("settingsToggle"), settings: $("settings"),
     skeleton: $("skeleton"), debug: $("debug"), readout: $("readout"),
@@ -391,24 +391,26 @@
   function showIntro() {
     elements.demo.hidden = true;
     elements.intro.hidden = false;
-    // The camera is still live behind this. Without re-labelling the button
-    // there is no way back to it -- the only control on this screen still reads
-    // "Start camera" and is disabled, which strands you here.
-    if (running) {
-      elements.enter.textContent = "Back to camera";
-      elements.enter.disabled = false;
-    }
+    // The intro button only ever moves between views, so it stays enabled and
+    // there is no way to get stranded here.
+    elements.enter.textContent = running ? "Back to camera" : "Start";
   }
 
-  elements.enter.addEventListener("click", async () => {
+  // The intro is purely informational: this just moves to the demo. The camera
+  // is started from the demo screen, where the permission prompt appears next to
+  // the thing it is asking about.
+  elements.enter.addEventListener("click", showDemo);
+
+  elements.cameraButton.addEventListener("click", async () => {
     if (running) {
-      showDemo();
+      location.reload();
       return;
     }
 
-    elements.enter.disabled = true;
-    elements.enter.textContent = "Starting…";
-    showDemo();
+    elements.cameraButton.disabled = true;
+    elements.cameraButton.textContent = "Starting…";
+    elements.demoError.hidden = true;
+    elements.hint.textContent = "Starting camera…";
     elements.status.textContent = "Loading model and camera…";
 
     try {
@@ -420,6 +422,9 @@
       await demo.start();
       running = true;
       elements.hint.hidden = true;
+      elements.cameraButton.textContent = "Stop";
+      elements.cameraButton.classList.add("secondary");
+      elements.cameraButton.disabled = false;
 
       // Audio is discovered after the model loads, since the sign names come
       // from it. Starting it here keeps it inside the click that got us here --
@@ -435,25 +440,24 @@
         await sounds.start();
       }
     } catch (error) {
-      // Back to the intro, where the message has room and the button is the
-      // obvious thing to press again.
+      // Stay on the demo screen: the button that failed is here, and it is the
+      // obvious thing to press again once the permission is sorted out.
       running = false;
-      showIntro();
-      elements.enter.disabled = false;
-      elements.enter.textContent = "Start camera";
-      elements.introError.textContent =
+      elements.cameraButton.disabled = false;
+      elements.cameraButton.textContent = "Start camera";
+      elements.hint.textContent = "Camera off";
+      elements.status.textContent = "";
+      elements.demoError.textContent =
         error.reason === "permission"
-          ? "Camera permission denied. Allow it in your browser and try again."
+          ? "Camera permission denied. Allow it in your browser, then press Start camera again."
           : error.message;
-      elements.introError.hidden = false;
+      elements.demoError.hidden = false;
     }
   });
 
   // The camera keeps running behind the instructions, so coming back is instant
   // rather than paying for the permission prompt and model load again.
   elements.backToIntro.addEventListener("click", showIntro);
-
-  elements.stop.addEventListener("click", () => location.reload());
 
   elements.settingsToggle.addEventListener("click", () => {
     elements.settings.classList.toggle("open");
