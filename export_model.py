@@ -102,7 +102,12 @@ def main():
         json.dumps(
             {
                 "signs": [
-                    {"name": sign.name, "display": sign.display}
+                    {
+                        "name": sign.name,
+                        "display": sign.display,
+                        "howTo": sign.how_to,
+                        "note": sign.note,
+                    }
                     for sign in SIGNS
                 ]
             }

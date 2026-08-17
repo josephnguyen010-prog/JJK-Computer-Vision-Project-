@@ -20,34 +20,62 @@ class Sign:
     display: str      # what gets drawn on screen
     two_handed: bool
     occlusion: str    # "low" | "medium" | "high" -- expected tracking difficulty
+    how_to: str = ""  # shown on the intro page: how to make the shape
+    note: str = ""    # optional second line, e.g. what the sign is from
 
 
 # Record keys are unchanged from the original session -- each key still means the
 # same physical sign, so muscle memory from recording still applies. Only the
 # names changed, from descriptions of the hand shape to who the sign belongs to.
+#
+# `how_to` and `note` are shown on the intro page. They describe the signs as
+# actually recorded, which is what the model detects -- if you reword them, keep
+# them matching what you trained rather than what a reference says the sign
+# should look like, or visitors will copy the text and it will not fire.
+#
 SIGNS = [
     # Two closed fists held apart. The easiest sign of the set: compact, stable,
     # and with no hand-on-hand occlusion for MediaPipe to lose track of.
-    Sign("1", "megumi", "Megumi", True, "low"),
+    Sign(
+        "1", "megumi", "Megumi", True, "low",
+        how_to="Make a fist with each hand and hold them up in front of you, "
+               "a little apart, knuckles toward the camera.",
+    ),
 
     # Palm thrust toward the camera, other hand a raised fist. The thrust hand is
     # foreshortened and reads much larger than the fist -- that size difference
     # survives normalisation and is most of what separates this from yuta.
-    Sign("2", "sukuna", "Sukuna", True, "low"),
+    Sign(
+        "2", "sukuna", "Sukuna", True, "low",
+        how_to="Push one open palm out toward the camera, fingers spread, while "
+               "the other hand stays back in a raised fist.",
+    ),
 
     # Flat palm forward with fingers together, fist held lower at the chest.
     # Watch this one against sukuna in the confusion matrix: same two hand
     # shapes, differing mainly in depth and how high the fist sits.
-    Sign("3", "yuta", "Yuta", True, "low"),
+    Sign(
+        "3", "yuta", "Yuta", True, "low",
+        how_to="Hold one flat palm up facing the camera with the fingers "
+               "together, and keep the other hand in a fist low at your chest.",
+    ),
 
     # Fingers interlace, and MediaPipe merges both hands into a single detection
     # essentially always -- measured at 100% of recorded frames. A consistently
     # merged detection is still a distinctive, stable signature, and the [1, 0]
     # presence flags become part of what identifies it.
-    Sign("4", "gojo", "Gojo", False, "medium"),
+    Sign(
+        "4", "gojo", "Gojo", False, "medium",
+        how_to="Bring both hands together in front of you and cross the fingers "
+               "of one hand through the other.",
+    ),
 
     # Hands stay separate enough that both are found reliably.
-    Sign("5", "malevolent_shrine", "Malevolent Shrine", True, "medium"),
+    Sign(
+        "5", "malevolent_shrine", "Malevolent Shrine", True, "medium",
+        how_to="Bring your hands together and interlock them closely, held "
+               "upright in front of your chest.",
+    ),
 ]
 
 # `two_handed` above is documentation. What the detector's hand gate actually
