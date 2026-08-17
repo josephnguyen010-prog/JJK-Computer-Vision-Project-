@@ -46,7 +46,11 @@
     display: flex; align-items: center; justify-content: center;
     gap: 16px; flex-wrap: wrap; margin-bottom: 8px;
     font-size: clamp(1.15rem, 2.4vw, 1.75rem);
+    transition: font-size 160ms ease;
   }
+  /* Smaller once the camera is up: the mark stays for identity, but the demo is
+     what the screen is for by then. */
+  body.demo-active .titlebar { font-size: clamp(0.85rem, 1.5vw, 1.1rem); margin-bottom: 0; }
   #logo { height: 2.1em; width: auto; max-width: 60vw; object-fit: contain; display: block; }
 
   .title.has-logo h1 { font-size: 1em; font-weight: 600; margin: 0; line-height: 1.1; }
@@ -174,18 +178,21 @@
 </head>
 <body>
 
+<!-- Outside both views, so the mark stays put rather than appearing and
+     disappearing as you move between them. -->
+<div class="title" id="title">
+  <div class="titlebar">
+    <img id="logo" alt="Jujutsu Kaisen" hidden />
+    <h1 id="heading">Jujutsu Kaisen Computer Vision Project</h1>
+  </div>
+</div>
+
 <!-- ---------------- intro ---------------- -->
 <section id="intro">
-  <div class="title" id="title">
-    <div class="titlebar">
-      <img id="logo" alt="Jujutsu Kaisen" hidden />
-      <h1 id="heading">Jujutsu Kaisen Computer Vision Project</h1>
-    </div>
-    <p class="lede">
-      A hand sign recogniser trained from scratch. Throw one of five signs at your
-      webcam and it names the character it belongs to.
-    </p>
-  </div>
+  <p class="lede">
+    A hand sign recogniser trained from scratch. Throw one of five signs at your
+    webcam and it names the character it belongs to.
+  </p>
 
   <div class="steps">
     <div class="step">
@@ -440,11 +447,13 @@
   function showDemo() {
     elements.intro.hidden = true;
     elements.demo.hidden = false;
+    document.body.classList.add("demo-active");
   }
 
   function showIntro() {
     elements.demo.hidden = true;
     elements.intro.hidden = false;
+    document.body.classList.remove("demo-active");
     // The intro button only ever moves between views, so it stays enabled and
     // there is no way to get stranded here.
     elements.enter.textContent = running ? "Back to camera" : "Start";
