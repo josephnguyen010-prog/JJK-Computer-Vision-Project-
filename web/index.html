@@ -36,24 +36,20 @@
 
   .title { text-align: center; margin-bottom: 6px; }
 
-  /* Logo and heading sit side by side, wrapping to two lines on narrow screens
-     rather than shrinking the mark until it is unreadable. */
+  /* Logo and heading sit side by side, wrapping on narrow screens rather than
+     shrinking the mark until it is unreadable.
+
+     Both are sized from the bar's own font-size -- the logo in em, the heading
+     at 1em -- so they scale together and stay matched at every width instead of
+     drifting apart as the viewport changes. */
   .titlebar {
     display: flex; align-items: center; justify-content: center;
-    gap: 18px; flex-wrap: wrap; margin-bottom: 8px;
+    gap: 16px; flex-wrap: wrap; margin-bottom: 8px;
+    font-size: clamp(1.15rem, 2.4vw, 1.75rem);
   }
-  #logo { max-width: min(60vw, 340px); height: auto; display: block; }
+  #logo { height: 2.1em; width: auto; max-width: 60vw; object-fit: contain; display: block; }
 
-  .title.has-logo h1 {
-    font-size: 1.3rem; font-weight: 600; margin: 0;
-    /* A rule between the two, dropped when they wrap -- a divider hanging off
-       the end of a line reads as a mistake. */
-    padding-left: 18px; border-left: 1px solid var(--line);
-    text-align: left;
-  }
-  @media (max-width: 640px) {
-    .title.has-logo h1 { padding-left: 0; border-left: 0; text-align: center; }
-  }
+  .title.has-logo h1 { font-size: 1em; font-weight: 600; margin: 0; line-height: 1.1; }
   p.lede { margin: 0 auto; color: var(--muted); max-width: 62ch; text-align: center; font-size: 0.95rem; }
 
   button {
