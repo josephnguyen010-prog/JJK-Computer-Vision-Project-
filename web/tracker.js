@@ -7,8 +7,16 @@
  * called. Load it behind an explicit user action rather than on page load.
  */
 
+const TASKS_VERSION = "1.0.1";
+
+// The .mjs is named explicitly. jsDelivr's bare package URL serves whatever the
+// package's `main` field points at, which for tasks-vision is a CommonJS bundle
+// -- importing that as an ES module fails with nothing more useful than
+// "failed to fetch dynamically imported module".
+const TASKS_MODULE =
+  `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/vision_bundle.mjs`;
 const WASM_ROOT =
-  "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22/wasm";
+  `https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@${TASKS_VERSION}/wasm`;
 const MODEL_URL =
   "https://storage.googleapis.com/mediapipe-models/hand_landmarker/" +
   "hand_landmarker/float16/1/hand_landmarker.task";
@@ -66,18 +74,38 @@ export class HandTracker {
       });
     }
 
-    const { FilesetResolver, HandLandmarker } = await import(
-      "https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.22"
-    );
+    let FilesetResolver;
+    let HandLandmarker;
+    try {
+      ({ FilesetResolver, HandLandmarker } = await import(/* @vite-ignore */ TASKS_MODULE));
+    } catch (error) {
+      const failure = new Error(
+        `Could not load MediaPipe from the CDN. Check your connection, or any ` +
+          `extension blocking cdn.jsdelivr.net. (${error?.message ?? error})`
+      );
+      failure.reason = "mediapipe";
+      throw failure;
+    }
+
     const fileset = await FilesetResolver.forVisionTasks(WASM_ROOT);
-    this.landmarker = await HandLandmarker.createFromOptions(fileset, {
+    const options = {
       baseOptions: { modelAssetPath: MODEL_URL, delegate: "GPU" },
       runningMode: "VIDEO",
       numHands: this.numHands,
       minHandDetectionConfidence: this.minConfidence,
       minHandPresenceConfidence: this.minConfidence,
       minTrackingConfidence: this.minConfidence,
-    });
+    };
+
+    try {
+      this.landmarker = await HandLandmarker.createFromOptions(fileset, options);
+    } catch (error) {
+      // Not every machine and browser combination gives WebGL to a worker.
+      // Falling back to CPU is far better than refusing to run at all.
+      console.warn("GPU delegate unavailable, falling back to CPU:", error);
+      options.baseOptions.delegate = "CPU";
+      this.landmarker = await HandLandmarker.createFromOptions(fileset, options);
+    }
 
     return { width: video.videoWidth, height: video.videoHeight };
   }
