@@ -50,6 +50,18 @@ CONFIDENCE = 0.80        # smoothed probability needed to charge at all
 SMOOTHING = 0.35         # EMA weight on the newest frame
 DISCHARGE_RATE = 2.5     # charge drains this many times faster than it builds
 
+# How long a two-handed sign stays eligible after the last frame that genuinely
+# showed two hands.
+#
+# The gate originally asked "are two hands visible right now", which is too
+# strict: signs where the fingers interlace make MediaPipe merge both hands into
+# a single detection for stretches at a time, and the sign then becomes
+# impossible to throw rather than merely harder. What the gate is really for is
+# ruling out a sign when there is no evidence the second hand exists at all --
+# so it asks about the gesture rather than the frame. Evidence expires the
+# moment your hands leave frame, so it cannot carry into the next sign.
+TWO_HAND_GRACE_SECONDS = 1.5
+
 ENERGY_COLOR = np.array([255.0, 150.0, 60.0])   # BGR: cursed blue-white
 CHARGED_COLOR = np.array([120.0, 90.0, 255.0])  # shifts red as it completes
 
@@ -79,13 +91,26 @@ class SignDetector:
             dtype=bool,
         )
         self.hand_gate = hand_gate
+        self.since_two_hands = float("inf")
 
     def update(self, hands, dt):
         """Returns (label, confidence, charge, fired)."""
         features = build_feature_vector(hands).reshape(1, -1)
         frame_probabilities = self.model.predict_proba(features)[0]
 
-        if self.hand_gate and len(hands) < 2:
+        # Track how long since two hands were genuinely visible. An empty frame
+        # means the gesture is over, so the evidence expires at once rather than
+        # lingering into whatever comes next.
+        if len(hands) >= 2:
+            self.since_two_hands = 0.0
+        elif not hands:
+            self.since_two_hands = float("inf")
+        else:
+            self.since_two_hands += dt
+
+        two_hands_recently = self.since_two_hands <= TWO_HAND_GRACE_SECONDS
+
+        if self.hand_gate and not two_hands_recently:
             # Rule out the impossible, then put the probability mass back so the
             # remaining classes are still judged against the usual confidence
             # threshold rather than being quietly penalised for existing.

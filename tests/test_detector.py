@@ -53,7 +53,8 @@ def detector():
     instance.probabilities = np.zeros(len(CLASSES), dtype=np.float32)
     instance.charge = 0.0
     instance.locked = False
-    instance.hand_gate = True
+    instance.since_two_hands = float("inf")
+    instance.hand_gate =True
     instance.needs_two_hands = np.array(
         [bool(BY_NAME[name].two_handed) if name in BY_NAME else False for name in CLASSES],
         dtype=bool,
@@ -157,7 +158,8 @@ def gated_detector(label, hand_gate=True):
     instance.probabilities = np.zeros(len(REAL_CLASSES), dtype=np.float32)
     instance.charge = 0.0
     instance.locked = False
-    instance.hand_gate = hand_gate
+    instance.since_two_hands = float("inf")
+    instance.hand_gate =hand_gate
     instance.needs_two_hands = np.array(
         [bool(BY_NAME[name].two_handed) if name in BY_NAME else False for name in REAL_CLASSES],
         dtype=bool,
@@ -208,6 +210,42 @@ def test_gate_can_be_disabled():
     for _ in range(30):
         label, *_ = detector.update(ONE_HAND, DT)
     assert label == "gojo"
+
+
+def test_merging_mid_gesture_does_not_veto_the_sign():
+    """The gate asks about the gesture, not the frame.
+
+    Signs where the fingers interlace make MediaPipe merge both hands into one
+    detection for stretches at a time. Two hands seen at the start has to keep
+    the sign eligible, or it becomes impossible to throw rather than harder.
+    """
+    detector = gated_detector("gojo")
+    for _ in range(5):
+        detector.update(TWO_HANDS, DT)
+    for _ in range(30):
+        label, *_ = detector.update(ONE_HAND, DT)
+    assert label == "gojo"
+
+
+def test_two_hand_evidence_expires():
+    """One glimpse of two hands must not license a two-handed answer forever."""
+    detector = gated_detector("gojo")
+    for _ in range(5):
+        detector.update(TWO_HANDS, DT)
+    for _ in range(int(3.0 / DT)):
+        label, *_ = detector.update(ONE_HAND, DT)
+    assert label != "gojo"
+
+
+def test_hands_leaving_frame_clears_the_evidence():
+    """An empty frame ends the gesture, so nothing carries into the next one."""
+    detector = gated_detector("gojo")
+    for _ in range(5):
+        detector.update(TWO_HANDS, DT)
+    detector.update({}, DT)
+    for _ in range(30):
+        label, *_ = detector.update(ONE_HAND, DT)
+    assert label != "gojo"
 
 
 def test_single_bad_frame_does_not_cancel_the_charge(detector):

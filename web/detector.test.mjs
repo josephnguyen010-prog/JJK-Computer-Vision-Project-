@@ -8,7 +8,7 @@
  * ask them the same questions.
  */
 
-import { SignDetector, CHARGE_SECONDS, CONFIDENCE } from "./detector.js";
+import { SignDetector, CHARGE_SECONDS, CONFIDENCE, TWO_HAND_GRACE_SECONDS } from "./detector.js";
 
 const DT = 1 / 30;
 const CLASSES = ["idle", "gojo", "malevolent_shrine", "megumi"];
@@ -133,6 +133,41 @@ detector = makeDetector(false);
 detector.scripted.label = "gojo";
 for (let i = 0; i < 30; i += 1) result = detector.update(FEATURES, 1, DT);
 check(result.label === "gojo", "the gate can be disabled");
+
+console.log("\n[3] the gate asks about the gesture, not the frame");
+
+// A sign whose fingers interlace makes MediaPipe merge both hands for stretches
+// at a time. Two hands seen at the start of the gesture has to keep it eligible,
+// or the sign becomes impossible to throw rather than merely harder.
+detector = makeDetector();
+detector.scripted.label = "gojo";
+for (let i = 0; i < 5; i += 1) detector.update(FEATURES, 2, DT);
+for (let i = 0; i < 30; i += 1) result = detector.update(FEATURES, 1, DT);
+check(result.label === "gojo", "merging to one hand mid-gesture does not veto the sign");
+
+// ...but the evidence has to expire, or one glimpse of two hands would license
+// a two-handed answer indefinitely.
+detector = makeDetector();
+detector.scripted.label = "gojo";
+for (let i = 0; i < 5; i += 1) detector.update(FEATURES, 2, DT);
+for (let i = 0; i < Math.round(3 / DT); i += 1) result = detector.update(FEATURES, 1, DT);
+check(result.label !== "gojo", "the two-hand evidence expires after the grace period");
+
+// Hands leaving the frame ends the gesture, so evidence must not carry into the
+// next one.
+detector = makeDetector();
+detector.scripted.label = "gojo";
+for (let i = 0; i < 5; i += 1) detector.update(FEATURES, 2, DT);
+detector.update(FEATURES, 0, DT);
+for (let i = 0; i < 30; i += 1) result = detector.update(FEATURES, 1, DT);
+check(result.label !== "gojo", "hands leaving the frame clears the two-hand evidence");
+
+// The original bug still has to stay fixed: a single detection with no two-hand
+// evidence at all cannot be called a two-handed sign.
+detector = makeDetector();
+detector.scripted.label = "gojo";
+for (let i = 0; i < 30; i += 1) result = detector.update(FEATURES, 1, DT);
+check(result.label !== "gojo", "one hand and no evidence still cannot be a two-handed sign");
 
 console.log(failures === 0 ? "\nALL PASSED\n" : `\n${failures} FAILED\n`);
 process.exit(failures === 0 ? 0 : 1);

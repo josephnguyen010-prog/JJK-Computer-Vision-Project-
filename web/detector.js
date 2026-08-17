@@ -22,6 +22,18 @@ export const CONFIDENCE = 0.8;
 export const SMOOTHING = 0.35;
 export const DISCHARGE_RATE = 2.5;
 
+// How long a two-handed sign stays eligible after the last frame that actually
+// showed two hands.
+//
+// The gate originally asked "are two hands visible right now", which is too
+// strict: signs where the fingers interlace make MediaPipe merge both hands
+// into one detection for stretches at a time, and the sign then becomes
+// impossible to throw rather than merely harder. What the gate is really for is
+// ruling out a sign when there is no evidence the second hand exists at all --
+// so it asks about the gesture, not the frame. Evidence resets the moment your
+// hands leave the frame, so it cannot carry over from a previous sign.
+export const TWO_HAND_GRACE_SECONDS = 1.5;
+
 export class SignDetector {
   /**
    * @param {import("./classifier.js").Classifier} classifier
@@ -36,12 +48,14 @@ export class SignDetector {
     this.probabilities = new Float64Array(classifier.classes.length);
     this.charge = 0;
     this.locked = false;
+    this.sinceTwoHands = Infinity;
   }
 
   reset() {
     this.probabilities.fill(0);
     this.charge = 0;
     this.locked = false;
+    this.sinceTwoHands = Infinity;
   }
 
   /**
@@ -53,7 +67,16 @@ export class SignDetector {
   update(features, handCount, dt) {
     const frame = Float64Array.from(this.classifier.predictProba(features));
 
-    if (this.handGate && handCount < 2) {
+    // Track how long since two hands were genuinely visible. An empty frame
+    // means the gesture is over, so the evidence expires immediately rather
+    // than lingering into whatever comes next.
+    if (handCount >= 2) this.sinceTwoHands = 0;
+    else if (handCount === 0) this.sinceTwoHands = Infinity;
+    else this.sinceTwoHands += dt;
+
+    const twoHandsRecently = this.sinceTwoHands <= TWO_HAND_GRACE_SECONDS;
+
+    if (this.handGate && !twoHandsRecently) {
       // Rule out the impossible, then put the probability mass back so the
       // survivors are still judged against the usual confidence threshold
       // rather than being quietly penalised for existing.
