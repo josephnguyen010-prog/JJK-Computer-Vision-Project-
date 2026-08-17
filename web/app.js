@@ -26,12 +26,13 @@ export class SignDemo {
    * @param {HTMLCanvasElement} options.canvas  the camera panel
    * @param {(state: object) => void} [options.onState]  called every frame
    */
-  constructor({ video, canvas, onState = () => {}, modelUrl = "./model.json" }) {
+  constructor({ video, canvas, onState = () => {}, modelUrl = "./model.json", handGate = true }) {
     this.video = video;
     this.canvas = canvas;
     this.context = canvas.getContext("2d");
     this.onState = onState;
     this.modelUrl = modelUrl;
+    this.handGate = handGate;
 
     this.tracker = new HandTracker();
     this.classifier = null;
@@ -41,6 +42,7 @@ export class SignDemo {
     this.frameHandle = null;
     this.lastFrameTime = null;
     this.showSkeleton = true;
+    this.peakHands = 0;
   }
 
   /**
@@ -76,7 +78,7 @@ export class SignDemo {
     const twoHanded = Object.fromEntries(
       Object.entries(this.signs).map(([name, sign]) => [name, sign.twoHanded])
     );
-    this.detector = new SignDetector(this.classifier, { twoHanded });
+    this.detector = new SignDetector(this.classifier, { twoHanded, handGate: this.handGate });
 
     await mediapipeReady;
   }
@@ -132,6 +134,13 @@ export class SignDemo {
     const recognised = label !== "idle" && confidence >= 0.5 && handCount > 0;
     if (recognised) drawLabel(this.context, this.displayName(label));
 
+    // Highest hand count since your hands last left the frame. If a two-handed
+    // sign never reaches 2, the gate is what is blocking it -- worth showing
+    // rather than leaving it to be guessed at, since a live count flickers too
+    // fast to read.
+    if (handCount === 0) this.peakHands = 0;
+    else if (handCount > this.peakHands) this.peakHands = handCount;
+
     this.onState({
       loading: false,
       label,
@@ -140,6 +149,7 @@ export class SignDemo {
       charge,
       fired,
       handCount,
+      peakHands: this.peakHands,
       recognised,
       probabilities: this.detector.probabilities,
       classes: this.classifier.classes,

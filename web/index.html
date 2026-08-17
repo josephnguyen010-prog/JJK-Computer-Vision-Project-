@@ -194,7 +194,8 @@
       elements.readout.textContent = [
         ...ranked,
         `charge ${state.charge.toFixed(2)}`,
-        `hands  ${state.handCount}    ${fps} fps`,
+        `hands  ${state.handCount} (peak ${state.peakHands})    ${fps} fps`,
+        `gate   ${demo?.handGate ? "on" : "OFF"}`,
       ].join("\n");
     }
   }
@@ -203,7 +204,10 @@
     elements.start.disabled = true;
     elements.status.textContent = "Loading model and camera…";
     try {
-      demo = new SignDemo({ video: elements.video, canvas: elements.canvas, onState });
+      // ?gate=off disables the two-hand requirement, to test whether it is
+      // what is blocking a sign.
+      const handGate = new URLSearchParams(location.search).get("gate") !== "off";
+      demo = new SignDemo({ video: elements.video, canvas: elements.canvas, onState, handGate });
       elements.hint.textContent = "Starting camera…";
       await demo.start();
       elements.hint.style.display = "none";
