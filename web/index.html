@@ -26,8 +26,8 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 24px;
-    gap: 14px;
+    padding: 16px;
+    gap: 10px;
   }
 
   [hidden] { display: none !important; }
@@ -50,7 +50,7 @@
   #logo { height: 2.1em; width: auto; max-width: 60vw; object-fit: contain; display: block; }
 
   .title.has-logo h1 { font-size: 1em; font-weight: 600; margin: 0; line-height: 1.1; }
-  p.lede { margin: 0 auto; color: var(--muted); max-width: 62ch; text-align: center; font-size: 0.95rem; }
+  p.lede { margin: 0 auto; color: var(--muted); max-width: 68ch; text-align: center; font-size: 0.88rem; }
 
   button {
     font: inherit; font-weight: 600; color: #fff;
@@ -62,49 +62,57 @@
 
   /* ---- intro ---- */
 
-  #intro { width: min(100%, 1000px); display: flex; flex-direction: column; gap: 20px; }
+  #intro { width: min(100%, 1060px); display: flex; flex-direction: column; gap: 12px; }
 
   .steps {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 12px;
+    gap: 10px;
   }
   .step {
     background: var(--panel); border: 1px solid var(--line);
-    border-radius: 10px; padding: 14px 16px;
+    border-radius: 10px; padding: 10px 14px;
+    display: flex; align-items: baseline; gap: 10px;
   }
   .step .num {
+    flex: 0 0 auto;
     display: inline-grid; place-items: center;
-    width: 22px; height: 22px; border-radius: 50%;
+    width: 20px; height: 20px; border-radius: 50%;
     background: var(--accent); color: #fff;
-    font-size: 0.78rem; font-weight: 700; margin-bottom: 8px;
+    font-size: 0.74rem; font-weight: 700;
   }
-  .step h3 { margin: 0 0 4px; font-size: 0.92rem; font-weight: 600; }
-  .step p { margin: 0; color: var(--muted); font-size: 0.85rem; }
+  .step h3 { margin: 0 0 2px; font-size: 0.88rem; font-weight: 600; }
+  .step p { margin: 0; color: var(--muted); font-size: 0.8rem; line-height: 1.35; }
 
   .signs-heading { text-align: center; }
-  .signs-heading h2 { font-size: 1rem; margin: 0 0 4px; font-weight: 600; }
-  .signs-heading p { margin: 0; color: var(--muted); font-size: 0.86rem; }
+  .signs-heading h2 { font-size: 0.95rem; margin: 0; font-weight: 600; }
+  .signs-heading p { margin: 2px 0 0; color: var(--muted); font-size: 0.82rem; }
 
-  .signs { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+  .signs { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+  @media (max-width: 900px) { .signs { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); } }
 
   .sign-card {
     background: var(--panel); border: 1px solid var(--line);
-    border-radius: 10px; padding: 10px; text-align: center;
+    border-radius: 10px; padding: 8px; text-align: center;
     display: flex; flex-direction: column;
   }
+  /* Height rather than aspect-ratio: this is the tallest thing on the page, so
+     tying it to the viewport is what keeps the intro on one screen. */
   .sign-card .frame {
-    aspect-ratio: 1; display: grid; place-items: center;
-    border-radius: 6px; background: #14121a; overflow: hidden; margin-bottom: 8px;
+    height: clamp(64px, 13vh, 132px);
+    display: grid; place-items: center;
+    border-radius: 6px; background: #14121a; overflow: hidden; margin-bottom: 6px;
   }
   .sign-card img { width: 100%; height: 100%; object-fit: contain; }
   .sign-card .missing { color: var(--muted); font-size: 0.75rem; padding: 8px; }
-  .sign-card .name { font-size: 0.88rem; font-weight: 600; margin-bottom: 4px; }
-  .sign-card .how { font-size: 0.78rem; color: var(--muted); line-height: 1.45; text-align: left; }
-  .sign-card .note { font-size: 0.74rem; color: var(--muted); opacity: 0.75; margin-top: 6px; text-align: left; font-style: italic; }
+  .sign-card .name { font-size: 0.84rem; font-weight: 600; margin-bottom: 3px; }
+  .sign-card .how { font-size: 0.73rem; color: var(--muted); line-height: 1.35; text-align: left; margin: 0; }
+  .sign-card .note { font-size: 0.7rem; color: var(--muted); opacity: 0.75; margin: 4px 0 0; text-align: left; font-style: italic; }
 
-  .intro-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
-  .privacy { color: var(--muted); font-size: 0.82rem; text-align: center; }
+  .intro-actions { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .privacy { color: var(--muted); font-size: 0.78rem; text-align: center; margin: 0; }
+  .credit { color: var(--muted); font-size: 0.78rem; text-align: center; margin: 0; opacity: 0.8; }
+  .credit a { color: inherit; }
   .error { color: var(--accent); font-size: 0.86rem; text-align: center; margin: 0; max-width: 46ch; }
 
   /* ---- demo ---- */
@@ -185,18 +193,24 @@
   <div class="steps">
     <div class="step">
       <div class="num">1</div>
-      <h3>Allow the camera</h3>
-      <p>Your browser will ask. The feed never leaves your machine.</p>
+      <div>
+        <h3>Allow the camera</h3>
+        <p>Your browser will ask. The feed never leaves your machine.</p>
+      </div>
     </div>
     <div class="step">
       <div class="num">2</div>
-      <h3>Throw a sign</h3>
-      <p>Both hands up, facing the camera, roughly an arm's length back.</p>
+      <div>
+        <h3>Throw a sign</h3>
+        <p>Both hands up, facing the camera, roughly an arm's length back.</p>
+      </div>
     </div>
     <div class="step">
       <div class="num">3</div>
-      <h3>Hold it steady</h3>
-      <p>A ring closes around your hands as it charges. About a second.</p>
+      <div>
+        <h3>Hold it steady</h3>
+        <p>A ring closes around your hands as it charges. About a second.</p>
+      </div>
     </div>
   </div>
 
@@ -212,6 +226,7 @@
       Runs entirely in this tab &mdash; the video and the model both stay on your
       machine, and nothing is uploaded or recorded.
     </p>
+    <p class="credit">Created by Joseph Nguyen</p>
   </div>
 </section>
 
