@@ -3,4 +3,5 @@ opencv-python>=5.0.0
 numpy>=2.0
 scikit-learn>=1.9
 joblib>=1.5
+pillow>=10.0
 pytest>=8.0
