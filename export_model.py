@@ -19,6 +19,8 @@ from pathlib import Path
 import joblib
 import numpy as np
 
+from jjk.signs import ALL_SIGNS
+
 ROOT = Path(__file__).resolve().parent
 MODEL = ROOT / "models" / "classifier.joblib"
 DATASET = ROOT / "data" / "samples.npz"
@@ -44,6 +46,13 @@ def main():
 
     export = {
         "classes": [str(c) for c in net.classes_],
+        # Display names and hand counts travel with the model so the browser
+        # build reads them rather than keeping a second copy that can drift
+        # out of step with signs.py.
+        "signs": {
+            sign.name: {"display": sign.display, "twoHanded": sign.two_handed}
+            for sign in ALL_SIGNS
+        },
         "scaler": {
             "mean": scaler.mean_.tolist(),
             "scale": scaler.scale_.tolist(),
