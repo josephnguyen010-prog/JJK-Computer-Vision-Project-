@@ -88,6 +88,7 @@
 
   .intro-actions { display: flex; flex-direction: column; align-items: center; gap: 8px; }
   .privacy { color: var(--muted); font-size: 0.82rem; text-align: center; }
+  .error { color: var(--accent); font-size: 0.86rem; text-align: center; margin: 0; max-width: 46ch; }
 
   /* ---- demo ---- */
 
@@ -187,6 +188,7 @@
 
   <div class="intro-actions">
     <button id="enter">Start camera</button>
+    <p class="error" id="introError" hidden></p>
     <p class="privacy">
       Runs entirely in this tab &mdash; the video and the model both stay on your
       machine, and nothing is uploaded or recorded.
@@ -245,6 +247,7 @@
   const elements = {
     intro: $("intro"), demo: $("demo"), signGrid: $("signGrid"),
     enter: $("enter"), stop: $("stop"), backToIntro: $("backToIntro"),
+    introError: $("introError"),
     video: $("video"), canvas: $("camera"), portrait: $("portrait"), hint: $("hint"),
     settingsToggle: $("settingsToggle"), settings: $("settings"),
     skeleton: $("skeleton"), debug: $("debug"), readout: $("readout"),
@@ -254,6 +257,7 @@
 
   let demo = null;
   let sounds = null;
+  let running = false;
   let loaded = false;
   let shownPortrait = null;
   let frames = 0;
@@ -387,9 +391,21 @@
   function showIntro() {
     elements.demo.hidden = true;
     elements.intro.hidden = false;
+    // The camera is still live behind this. Without re-labelling the button
+    // there is no way back to it -- the only control on this screen still reads
+    // "Start camera" and is disabled, which strands you here.
+    if (running) {
+      elements.enter.textContent = "Back to camera";
+      elements.enter.disabled = false;
+    }
   }
 
   elements.enter.addEventListener("click", async () => {
+    if (running) {
+      showDemo();
+      return;
+    }
+
     elements.enter.disabled = true;
     elements.enter.textContent = "Starting…";
     showDemo();
@@ -402,6 +418,7 @@
       demo = new SignDemo({ video: elements.video, canvas: elements.canvas, onState, handGate });
       demo.showSkeleton = elements.skeleton.checked;
       await demo.start();
+      running = true;
       elements.hint.hidden = true;
 
       // Audio is discovered after the model loads, since the sign names come
@@ -420,14 +437,15 @@
     } catch (error) {
       // Back to the intro, where the message has room and the button is the
       // obvious thing to press again.
+      running = false;
       showIntro();
       elements.enter.disabled = false;
       elements.enter.textContent = "Start camera";
-      elements.status.textContent =
+      elements.introError.textContent =
         error.reason === "permission"
           ? "Camera permission denied. Allow it in your browser and try again."
           : error.message;
-      alert(elements.status.textContent);
+      elements.introError.hidden = false;
     }
   });
 
