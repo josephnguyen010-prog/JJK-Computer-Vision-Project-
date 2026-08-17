@@ -123,6 +123,7 @@
 <div class="controls">
   <button id="start">Start camera</button>
   <button id="skeleton" class="secondary" disabled>Hide hands</button>
+  <button id="sound" class="secondary" disabled hidden>Mute</button>
   <button id="debug" class="secondary" disabled>Show readout</button>
 </div>
 
@@ -133,6 +134,7 @@
 
 <script type="module">
   import { SignDemo } from "./app.js";
+  import { SoundBoard } from "./audio.js";
 
   const elements = {
     video: document.getElementById("video"),
@@ -141,12 +143,14 @@
     hint: document.getElementById("hint"),
     start: document.getElementById("start"),
     skeleton: document.getElementById("skeleton"),
+    sound: document.getElementById("sound"),
     debug: document.getElementById("debug"),
     status: document.getElementById("status"),
     readout: document.getElementById("readout"),
   };
 
   let demo = null;
+  let sounds = null;
   let loaded = false;
   let shownPortrait = null;
   let frames = 0;
@@ -186,6 +190,8 @@
       }
     }
 
+    if (state.fired) sounds?.fire(state.label);
+
     if (elements.readout.classList.contains("visible")) {
       const ranked = [...state.classes.keys()]
         .sort((a, b) => state.probabilities[b] - state.probabilities[a])
@@ -213,6 +219,18 @@
       elements.hint.style.display = "none";
       elements.skeleton.disabled = false;
       elements.debug.disabled = false;
+
+      // Audio is discovered after the model loads, since the sign names come
+      // from it. Starting it here keeps it inside the click that got us here --
+      // browsers block playback that isn't traceable to a user gesture.
+      sounds = new SoundBoard({ signs: demo.classifier.classes });
+      const available = await sounds.load();
+      if (sounds.hasAudio) {
+        elements.sound.hidden = false;
+        elements.sound.disabled = false;
+        await sounds.start();
+        console.log("Audio loaded:", available);
+      }
       elements.start.textContent = "Stop";
       elements.start.disabled = false;
       elements.start.onclick = () => location.reload();
@@ -228,6 +246,12 @@
   elements.skeleton.addEventListener("click", () => {
     demo.showSkeleton = !demo.showSkeleton;
     elements.skeleton.textContent = demo.showSkeleton ? "Hide hands" : "Show hands";
+  });
+
+  elements.sound.addEventListener("click", () => {
+    const muted = !sounds.muted;
+    sounds.setMuted(muted);
+    elements.sound.textContent = muted ? "Unmute" : "Mute";
   });
 
   elements.debug.addEventListener("click", () => {
